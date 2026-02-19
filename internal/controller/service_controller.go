@@ -117,6 +117,12 @@ func (r *ServiceReconciler) reconcileCreate(ctx context.Context, svc *corev1.Ser
 		return reconcile.Result{}, fmt.Errorf("provisioning tunnel: %w", err)
 	}
 
+	// Re-fetch the Service to get the latest version before patching.
+	key := client.ObjectKeyFromObject(svc)
+	if err := r.client.Get(ctx, key, svc); err != nil {
+		return reconcile.Result{}, fmt.Errorf("re-fetching service: %w", err)
+	}
+
 	// Store tunnel state in annotations.
 	if svc.Annotations == nil {
 		svc.Annotations = make(map[string]string)
@@ -128,6 +134,11 @@ func (r *ServiceReconciler) reconcileCreate(ctx context.Context, svc *corev1.Ser
 
 	if err := r.client.Update(ctx, svc); err != nil {
 		return reconcile.Result{}, fmt.Errorf("updating service annotations: %w", err)
+	}
+
+	// Re-fetch again before status update.
+	if err := r.client.Get(ctx, key, svc); err != nil {
+		return reconcile.Result{}, fmt.Errorf("re-fetching service for status: %w", err)
 	}
 
 	// Patch the Service status with the public IP.

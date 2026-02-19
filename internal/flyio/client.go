@@ -12,14 +12,16 @@ import (
 )
 
 const (
-	defaultBaseURL = "https://api.machines.dev"
-	apiVersion     = "v1"
+	defaultBaseURL    = "https://api.machines.dev"
+	defaultGraphQLURL = "https://api.fly.io/graphql"
+	apiVersion        = "v1"
 )
 
 // Client interacts with the Fly.io Machines API.
 type Client struct {
 	httpClient *http.Client
 	baseURL    string
+	graphQLURL string
 	token      string
 }
 
@@ -28,8 +30,21 @@ func NewClient(token string) *Client {
 	return &Client{
 		httpClient: &http.Client{Timeout: 60 * time.Second},
 		baseURL:    defaultBaseURL,
+		graphQLURL: defaultGraphQLURL,
 		token:      token,
 	}
+}
+
+// WithBaseURL sets a custom base URL for the Machines REST API.
+func (c *Client) WithBaseURL(url string) *Client {
+	c.baseURL = url
+	return c
+}
+
+// WithGraphQLURL sets a custom GraphQL endpoint URL.
+func (c *Client) WithGraphQLURL(url string) *Client {
+	c.graphQLURL = url
+	return c
 }
 
 // Machine represents a Fly.io Machine.
@@ -305,7 +320,7 @@ func (c *Client) AllocateDedicatedIPv4(ctx context.Context, appName string) (*IP
 		return nil, fmt.Errorf("marshaling graphql request: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.fly.io/graphql", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.graphQLURL, bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("creating request: %w", err)
 	}
@@ -363,7 +378,7 @@ func (c *Client) ReleaseIPAddress(ctx context.Context, appName, ipID string) err
 		return fmt.Errorf("marshaling graphql request: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.fly.io/graphql", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.graphQLURL, bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("creating request: %w", err)
 	}
@@ -419,7 +434,7 @@ func (c *Client) ListIPAddresses(ctx context.Context, appName string) ([]IPAddre
 		return nil, fmt.Errorf("marshaling graphql request: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.fly.io/graphql", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.graphQLURL, bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("creating request: %w", err)
 	}
