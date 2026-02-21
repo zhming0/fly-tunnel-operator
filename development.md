@@ -25,7 +25,7 @@ The operator can run outside the cluster using your local kubeconfig:
 
 ```bash
 export FLY_API_TOKEN=<your-token>
-export FLY_APP=<your-app>
+export FLY_ORG=<your-org-slug>
 export FLY_REGION=ord
 
 go run . \
@@ -130,7 +130,7 @@ internal/
 │   └── manager_test.go             # Unit tests with fakes (5 tests)
 ├── flyio/
 │   ├── client.go                   # Fly.io Machines REST API + GraphQL client
-│   └── client_test.go              # Unit tests with httptest server (12 tests)
+│   └── client_test.go              # Unit tests with httptest server (15 tests)
 ├── frp/
 │   ├── config.go                   # TOML config generation for frpc/frps
 │   ├── config_test.go              # Unit tests (3 tests)

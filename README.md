@@ -30,18 +30,18 @@ Internet
 
 When a `Service` with `type: LoadBalancer` and `spec.loadBalancerClass: fly-tunnel-operator.dev/lb` is created, the operator:
 
-1. Creates a Fly.io Machine running `frps` (frp server)
-2. Allocates a dedicated IPv4 address on Fly.io
-3. Deploys an `frpc` (frp client) Deployment in-cluster with a generated TOML config
-4. Patches the Service's `.status.loadBalancer.ingress` with the public IP
+1. Creates a dedicated Fly.io App for the Service
+2. Creates a Fly.io Machine running `frps` (frp server) inside that app
+3. Allocates a dedicated IPv4 address on Fly.io
+4. Deploys an `frpc` (frp client) Deployment in-cluster with a generated TOML config
+5. Patches the Service's `.status.loadBalancer.ingress` with the public IP
 
-When the Service is deleted, the operator tears down everything in reverse (Machine, IP, frpc Deployment + ConfigMap) using a finalizer.
+When the Service is deleted, the operator tears down everything in reverse (frpc Deployment + ConfigMap, IP, Machine, Fly App) using a finalizer.
 
 ## Prerequisites
 
 - A Kubernetes cluster (any distro: k3s, kind, EKS, GKE, etc.)
 - A [Fly.io](https://fly.io) account with an API token
-- A Fly.io app created for hosting the Machines (`fly apps create <name>`)
 - Helm 3
 
 ## Installation
@@ -53,7 +53,7 @@ helm install fly-tunnel-operator charts/fly-tunnel-operator \
   --namespace fly-tunnel-operator-system \
   --create-namespace \
   --set flyApiToken=<YOUR_FLY_API_TOKEN> \
-  --set flyApp=<YOUR_FLY_APP_NAME> \
+  --set flyOrg=<YOUR_FLY_ORG_SLUG> \
   --set flyRegion=ord
 ```
 
@@ -62,7 +62,7 @@ helm install fly-tunnel-operator charts/fly-tunnel-operator \
 | Parameter | Default | Description |
 |---|---|---|
 | `flyApiToken` | (required) | Fly.io API token |
-| `flyApp` | (required) | Fly.io app name for Machines |
+| `flyOrg` | (required) | Fly.io organization slug (e.g. `personal`) |
 | `flyRegion` | (required) | Fly.io region (e.g. `ord`, `sjc`, `lhr`) |
 | `flyMachineSize` | `shared-cpu-1x` | Machine size preset |
 | `loadBalancerClass` | `fly-tunnel-operator.dev/lb` | LoadBalancer class to watch |
@@ -152,6 +152,7 @@ The operator tracks tunnel state on the Service via annotations:
 
 | Annotation | Description |
 |---|---|
+| `fly-tunnel-operator.dev/fly-app` | Fly.io App name created for this Service |
 | `fly-tunnel-operator.dev/machine-id` | Fly.io Machine ID |
 | `fly-tunnel-operator.dev/frpc-deployment` | Name of the in-cluster frpc Deployment |
 | `fly-tunnel-operator.dev/ip-id` | Fly.io IP address allocation ID |
