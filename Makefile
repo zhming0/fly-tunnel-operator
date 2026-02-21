@@ -1,4 +1,4 @@
-IMG ?= fly-frp-tunnel:latest
+IMG ?= fly-tunnel-operator:latest
 
 .PHONY: all
 all: build
@@ -40,15 +40,15 @@ docker-push:
 ## Install/Deploy (using Helm)
 .PHONY: helm-install
 helm-install:
-	helm install fly-frp-tunnel charts/fly-frp-tunnel
+	helm install fly-tunnel-operator charts/fly-tunnel-operator
 
 .PHONY: helm-uninstall
 helm-uninstall:
-	helm uninstall fly-frp-tunnel
+	helm uninstall fly-tunnel-operator
 
 .PHONY: helm-template
 helm-template:
-	helm template fly-frp-tunnel charts/fly-frp-tunnel
+	helm template fly-tunnel-operator charts/fly-tunnel-operator
 
 ## Manifests
 .PHONY: manifests

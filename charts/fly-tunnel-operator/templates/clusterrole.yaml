@@ -1,28 +1,25 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: fly-frp-tunnel-operator
+  name: {{ include "fly-tunnel-operator.fullname" . }}
+  labels:
+    {{- include "fly-tunnel-operator.labels" . | nindent 4 }}
 rules:
-  # Watch and patch Services (core resource).
   - apiGroups: [""]
     resources: ["services"]
     verbs: ["get", "list", "watch", "update", "patch"]
   - apiGroups: [""]
     resources: ["services/status"]
     verbs: ["get", "update", "patch"]
-  # Manage frpc Deployments.
   - apiGroups: ["apps"]
     resources: ["deployments"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  # Manage frpc ConfigMaps.
   - apiGroups: [""]
     resources: ["configmaps"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  # Events for status reporting.
   - apiGroups: [""]
     resources: ["events"]
     verbs: ["create", "patch"]
-  # Leader election.
   - apiGroups: ["coordination.k8s.io"]
     resources: ["leases"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]

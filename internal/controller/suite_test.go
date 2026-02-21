@@ -14,10 +14,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"github.com/zhiming0/fly-frp-tunnel/internal/controller"
-	"github.com/zhiming0/fly-frp-tunnel/internal/fakefly"
-	"github.com/zhiming0/fly-frp-tunnel/internal/flyio"
-	"github.com/zhiming0/fly-frp-tunnel/internal/tunnel"
+	"github.com/zhiming0/fly-tunnel-operator/internal/controller"
+	"github.com/zhiming0/fly-tunnel-operator/internal/fakefly"
+	"github.com/zhiming0/fly-tunnel-operator/internal/flyio"
+	"github.com/zhiming0/fly-tunnel-operator/internal/tunnel"
 )
 
 var (
@@ -31,7 +31,7 @@ var (
 	flyServer *fakefly.Server
 )
 
-const operatorNamespace = "fly-frp-tunnel-system"
+const operatorNamespace = "fly-tunnel-operator-system"
 
 func TestMain(m *testing.M) {
 	log.SetLogger(zap.New(zap.WriteTo(os.Stderr), zap.UseDevMode(true)))

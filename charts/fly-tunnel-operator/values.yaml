@@ -1,4 +1,4 @@
-# fly-frp-tunnel operator configuration.
+# fly-tunnel-operator operator configuration.
 
 # Fly.io configuration (required).
 flyApiToken: ""
@@ -9,7 +9,7 @@ flyRegion: ""
 flyMachineSize: "shared-cpu-1x"
 
 # LoadBalancer class string to watch.
-loadBalancerClass: "fly-frp-tunnel.dev/lb"
+loadBalancerClass: "fly-tunnel-operator.dev/lb"
 
 # Container images.
 frpsImage: "snowdreamtech/frps:latest"
@@ -17,7 +17,7 @@ frpcImage: "snowdreamtech/frpc:latest"
 
 # Operator image.
 image:
-  repository: ghcr.io/zhiming0/fly-frp-tunnel
+  repository: ghcr.io/zhiming0/fly-tunnel-operator
   tag: ""  # Defaults to appVersion.
   pullPolicy: IfNotPresent
 

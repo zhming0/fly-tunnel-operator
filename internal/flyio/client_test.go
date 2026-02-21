@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/zhiming0/fly-frp-tunnel/internal/fakefly"
-	"github.com/zhiming0/fly-frp-tunnel/internal/flyio"
+	"github.com/zhiming0/fly-tunnel-operator/internal/fakefly"
+	"github.com/zhiming0/fly-tunnel-operator/internal/flyio"
 )
 
 func newTestClient(server *fakefly.Server) *flyio.Client {

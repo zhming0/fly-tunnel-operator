@@ -1,25 +1,25 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "fly-frp-tunnel.fullname" . }}
+  name: {{ include "fly-tunnel-operator.fullname" . }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "fly-frp-tunnel.labels" . | nindent 4 }}
+    {{- include "fly-tunnel-operator.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      {{- include "fly-frp-tunnel.selectorLabels" . | nindent 6 }}
+      {{- include "fly-tunnel-operator.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "fly-frp-tunnel.selectorLabels" . | nindent 8 }}
+        {{- include "fly-tunnel-operator.selectorLabels" . | nindent 8 }}
       {{- with .Values.podAnnotations }}
       annotations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
     spec:
-      serviceAccountName: {{ include "fly-frp-tunnel.serviceAccountName" . }}
+      serviceAccountName: {{ include "fly-tunnel-operator.serviceAccountName" . }}
       containers:
         - name: manager
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
@@ -36,17 +36,17 @@ spec:
             - name: FLY_API_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "fly-frp-tunnel.fullname" . }}
+                  name: {{ include "fly-tunnel-operator.fullname" . }}
                   key: fly-api-token
             - name: FLY_APP
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "fly-frp-tunnel.fullname" . }}
+                  name: {{ include "fly-tunnel-operator.fullname" . }}
                   key: fly-app
             - name: FLY_REGION
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "fly-frp-tunnel.fullname" . }}
+                  name: {{ include "fly-tunnel-operator.fullname" . }}
                   key: fly-region
             - name: OPERATOR_NAMESPACE
               valueFrom:

@@ -16,7 +16,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/zhiming0/fly-frp-tunnel/internal/frp"
+	"github.com/zhiming0/fly-tunnel-operator/internal/frp"
 )
 
 // findFrpBinary searches for frps/frpc in common locations.

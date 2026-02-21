@@ -3,4 +3,4 @@ kind: Namespace
 metadata:
   name: {{ .Release.Namespace }}
   labels:
-    {{- include "fly-frp-tunnel.labels" . | nindent 4 }}
+    {{- include "fly-tunnel-operator.labels" . | nindent 4 }}

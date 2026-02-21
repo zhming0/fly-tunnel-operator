@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/zhiming0/fly-frp-tunnel/internal/flyio"
+	"github.com/zhiming0/fly-tunnel-operator/internal/flyio"
 )
 
 // Server is a fake Fly.io API server for testing.

@@ -15,19 +15,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/zhiming0/fly-frp-tunnel/internal/flyio"
-	"github.com/zhiming0/fly-frp-tunnel/internal/frp"
+	"github.com/zhiming0/fly-tunnel-operator/internal/flyio"
+	"github.com/zhiming0/fly-tunnel-operator/internal/frp"
 )
 
 const (
 	// Annotation keys used on the Service to track tunnel state.
-	AnnotationMachineID     = "fly-frp-tunnel.dev/machine-id"
-	AnnotationFrpcDeployment = "fly-frp-tunnel.dev/frpc-deployment"
-	AnnotationIPID          = "fly-frp-tunnel.dev/ip-id"
-	AnnotationPublicIP      = "fly-frp-tunnel.dev/public-ip"
-	AnnotationTunnelGroup   = "fly-frp-tunnel.dev/tunnel-group"
-	AnnotationFlyRegion     = "fly-frp-tunnel.dev/fly-region"
-	AnnotationFlyMachineSize = "fly-frp-tunnel.dev/fly-machine-size"
+	AnnotationMachineID     = "fly-tunnel-operator.dev/machine-id"
+	AnnotationFrpcDeployment = "fly-tunnel-operator.dev/frpc-deployment"
+	AnnotationIPID          = "fly-tunnel-operator.dev/ip-id"
+	AnnotationPublicIP      = "fly-tunnel-operator.dev/public-ip"
+	AnnotationTunnelGroup   = "fly-tunnel-operator.dev/tunnel-group"
+	AnnotationFlyRegion     = "fly-tunnel-operator.dev/fly-region"
+	AnnotationFlyMachineSize = "fly-tunnel-operator.dev/fly-machine-size"
 )
 
 // Config holds operator-level configuration.
@@ -235,7 +235,7 @@ func (m *Manager) Update(ctx context.Context, svc *corev1.Service) error {
 	if deploy.Spec.Template.Annotations == nil {
 		deploy.Spec.Template.Annotations = make(map[string]string)
 	}
-	deploy.Spec.Template.Annotations["fly-frp-tunnel.dev/restart-at"] = time.Now().Format(time.RFC3339)
+	deploy.Spec.Template.Annotations["fly-tunnel-operator.dev/restart-at"] = time.Now().Format(time.RFC3339)
 	if err := m.kubeClient.Update(ctx, &deploy); err != nil {
 		return fmt.Errorf("updating frpc deployment: %w", err)
 	}
@@ -307,8 +307,8 @@ func (m *Manager) deployFrpc(ctx context.Context, svc *corev1.Service, serverAdd
 			Namespace: m.config.OperatorNamespace,
 			Labels: map[string]string{
 				"app.kubernetes.io/name":       "frpc",
-				"app.kubernetes.io/managed-by": "fly-frp-tunnel",
-				"fly-frp-tunnel.dev/service":   fmt.Sprintf("%s-%s", svc.Namespace, svc.Name),
+				"app.kubernetes.io/managed-by": "fly-tunnel-operator",
+				"fly-tunnel-operator.dev/service":   fmt.Sprintf("%s-%s", svc.Namespace, svc.Name),
 			},
 		},
 		Data: map[string]string{
@@ -335,7 +335,7 @@ func (m *Manager) deployFrpc(ctx context.Context, svc *corev1.Service, serverAdd
 	labels := map[string]string{
 		"app.kubernetes.io/name":       "frpc",
 		"app.kubernetes.io/instance":   deploymentName,
-		"app.kubernetes.io/managed-by": "fly-frp-tunnel",
+		"app.kubernetes.io/managed-by": "fly-tunnel-operator",
 	}
 
 	deploy := &appsv1.Deployment{

@@ -17,15 +17,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/zhiming0/fly-frp-tunnel/internal/tunnel"
+	"github.com/zhiming0/fly-tunnel-operator/internal/tunnel"
 )
 
 const (
 	// DefaultLoadBalancerClass is the default loadBalancerClass to watch.
-	DefaultLoadBalancerClass = "fly-frp-tunnel.dev/lb"
+	DefaultLoadBalancerClass = "fly-tunnel-operator.dev/lb"
 
 	// FinalizerName is the finalizer added to managed Services for cleanup.
-	FinalizerName = "fly-frp-tunnel.dev/finalizer"
+	FinalizerName = "fly-tunnel-operator.dev/finalizer"
 )
 
 // ServiceReconciler reconciles Service objects with type LoadBalancer

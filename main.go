@@ -11,9 +11,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"github.com/zhiming0/fly-frp-tunnel/internal/controller"
-	"github.com/zhiming0/fly-frp-tunnel/internal/flyio"
-	"github.com/zhiming0/fly-frp-tunnel/internal/tunnel"
+	"github.com/zhiming0/fly-tunnel-operator/internal/controller"
+	"github.com/zhiming0/fly-tunnel-operator/internal/flyio"
+	"github.com/zhiming0/fly-tunnel-operator/internal/tunnel"
 )
 
 var scheme = runtime.NewScheme()
@@ -68,7 +68,7 @@ func main() {
 		operatorNamespace = os.Getenv("OPERATOR_NAMESPACE")
 	}
 	if operatorNamespace == "" {
-		operatorNamespace = "fly-frp-tunnel-system"
+		operatorNamespace = "fly-tunnel-operator-system"
 	}
 
 	// Validate required configuration.
@@ -89,7 +89,7 @@ func main() {
 		Scheme:                 scheme,
 		HealthProbeBindAddress: healthProbeAddr,
 		LeaderElection:         true,
-		LeaderElectionID:       "fly-frp-tunnel-operator",
+		LeaderElectionID:       "fly-tunnel-operator",
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to create manager")

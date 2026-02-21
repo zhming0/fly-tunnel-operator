@@ -14,7 +14,7 @@
 make build
 
 # Build the Docker image
-make docker-build IMG=fly-frp-tunnel:dev
+make docker-build IMG=fly-tunnel-operator:dev
 ```
 
 The binary is output to `bin/manager`.
@@ -29,7 +29,7 @@ export FLY_APP=<your-app>
 export FLY_REGION=ord
 
 go run . \
-  --namespace fly-frp-tunnel-system \
+  --namespace fly-tunnel-operator-system \
   --fly-machine-size shared-cpu-1x
 ```
 
@@ -39,7 +39,7 @@ Or equivalently:
 make run
 ```
 
-By default the operator watches Services with `loadBalancerClass: fly-frp-tunnel.dev/lb`. Override with `--load-balancer-class`.
+By default the operator watches Services with `loadBalancerClass: fly-tunnel-operator.dev/lb`. Override with `--load-balancer-class`.
 
 ## Testing
 
@@ -147,7 +147,7 @@ The operator works entirely with core `Service` objects. It watches `Service typ
 
 ### Finalizer-based cleanup
 
-A finalizer (`fly-frp-tunnel.dev/finalizer`) is added to every managed Service. On deletion, the operator tears down the Fly.io Machine, releases the IPv4, and deletes the in-cluster frpc Deployment + ConfigMap before removing the finalizer and allowing the Service to be garbage collected.
+A finalizer (`fly-tunnel-operator.dev/finalizer`) is added to every managed Service. On deletion, the operator tears down the Fly.io Machine, releases the IPv4, and deletes the in-cluster frpc Deployment + ConfigMap before removing the finalizer and allowing the Service to be garbage collected.
 
 ### One Machine per Service
 
@@ -159,7 +159,7 @@ The frpc client runs as a Deployment inside the cluster. Its config is mounted f
 
 ## Helm chart
 
-The Helm chart is in `charts/fly-frp-tunnel/`. To render templates without installing:
+The Helm chart is in `charts/fly-tunnel-operator/`. To render templates without installing:
 
 ```bash
 make helm-template
@@ -174,8 +174,8 @@ make helm-install
 To customize values:
 
 ```bash
-helm install fly-frp-tunnel charts/fly-frp-tunnel \
-  --namespace fly-frp-tunnel-system \
+helm install fly-tunnel-operator charts/fly-tunnel-operator \
+  --namespace fly-tunnel-operator-system \
   --create-namespace \
   -f my-values.yaml
 ```

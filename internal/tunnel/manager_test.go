@@ -12,12 +12,12 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/zhiming0/fly-frp-tunnel/internal/fakefly"
-	"github.com/zhiming0/fly-frp-tunnel/internal/flyio"
-	"github.com/zhiming0/fly-frp-tunnel/internal/tunnel"
+	"github.com/zhiming0/fly-tunnel-operator/internal/fakefly"
+	"github.com/zhiming0/fly-tunnel-operator/internal/flyio"
+	"github.com/zhiming0/fly-tunnel-operator/internal/tunnel"
 )
 
-const testNamespace = "fly-frp-tunnel-system"
+const testNamespace = "fly-tunnel-operator-system"
 
 func newTestScheme() *runtime.Scheme {
 	s := runtime.NewScheme()
@@ -43,7 +43,7 @@ func newTestFlyClient(server *fakefly.Server) *flyio.Client {
 }
 
 func testService(name, namespace string, ports ...corev1.ServicePort) *corev1.Service {
-	lbClass := "fly-frp-tunnel.dev/lb"
+	lbClass := "fly-tunnel-operator.dev/lb"
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,
@@ -312,7 +312,7 @@ func TestUpdate(t *testing.T) {
 		t.Fatalf("expected Deployment to exist: %v", err)
 	}
 
-	if _, ok := deploy.Spec.Template.Annotations["fly-frp-tunnel.dev/restart-at"]; !ok {
+	if _, ok := deploy.Spec.Template.Annotations["fly-tunnel-operator.dev/restart-at"]; !ok {
 		t.Error("expected restart annotation on Deployment pod template")
 	}
 }

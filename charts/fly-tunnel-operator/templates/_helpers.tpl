@@ -1,14 +1,14 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "fly-frp-tunnel.name" -}}
+{{- define "fly-tunnel-operator.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Create a default fully qualified app name.
 */}}
-{{- define "fly-frp-tunnel.fullname" -}}
+{{- define "fly-tunnel-operator.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -24,9 +24,9 @@ Create a default fully qualified app name.
 {{/*
 Common labels.
 */}}
-{{- define "fly-frp-tunnel.labels" -}}
-helm.sh/chart: {{ include "fly-frp-tunnel.chart" . }}
-{{ include "fly-frp-tunnel.selectorLabels" . }}
+{{- define "fly-tunnel-operator.labels" -}}
+helm.sh/chart: {{ include "fly-tunnel-operator.chart" . }}
+{{ include "fly-tunnel-operator.selectorLabels" . }}
 app.kubernetes.io/version: {{ .Values.image.tag | default .Chart.AppVersion | quote }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
@@ -34,24 +34,24 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels.
 */}}
-{{- define "fly-frp-tunnel.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "fly-frp-tunnel.name" . }}
+{{- define "fly-tunnel-operator.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "fly-tunnel-operator.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
 Chart label.
 */}}
-{{- define "fly-frp-tunnel.chart" -}}
+{{- define "fly-tunnel-operator.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Service account name.
 */}}
-{{- define "fly-frp-tunnel.serviceAccountName" -}}
+{{- define "fly-tunnel-operator.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "fly-frp-tunnel.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "fly-tunnel-operator.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}

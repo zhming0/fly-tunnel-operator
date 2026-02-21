@@ -1,8 +1,8 @@
-# fly-frp-tunnel
+# fly-tunnel-operator
 
 A Kubernetes operator that fulfills `Service type: LoadBalancer` requests by provisioning [frp](https://github.com/fatedier/frp) tunnels through [Fly.io](https://fly.io) Machines.
 
-Designed for homelabs and environments without a cloud provider's load balancer integration, fly-frp-tunnel gives every `LoadBalancer` Service a real public IPv4 address routed through Fly.io's global anycast network.
+Designed for homelabs and environments without a cloud provider's load balancer integration, fly-tunnel-operator gives every `LoadBalancer` Service a real public IPv4 address routed through Fly.io's global anycast network.
 
 ## How it works
 
@@ -28,7 +28,7 @@ Internet
 └──────────────────────────┘
 ```
 
-When a `Service` with `type: LoadBalancer` and `spec.loadBalancerClass: fly-frp-tunnel.dev/lb` is created, the operator:
+When a `Service` with `type: LoadBalancer` and `spec.loadBalancerClass: fly-tunnel-operator.dev/lb` is created, the operator:
 
 1. Creates a Fly.io Machine running `frps` (frp server)
 2. Allocates a dedicated IPv4 address on Fly.io
@@ -49,8 +49,8 @@ When the Service is deleted, the operator tears down everything in reverse (Mach
 ### Via Helm
 
 ```bash
-helm install fly-frp-tunnel charts/fly-frp-tunnel \
-  --namespace fly-frp-tunnel-system \
+helm install fly-tunnel-operator charts/fly-tunnel-operator \
+  --namespace fly-tunnel-operator-system \
   --create-namespace \
   --set flyApiToken=<YOUR_FLY_API_TOKEN> \
   --set flyApp=<YOUR_FLY_APP_NAME> \
@@ -65,10 +65,10 @@ helm install fly-frp-tunnel charts/fly-frp-tunnel \
 | `flyApp` | (required) | Fly.io app name for Machines |
 | `flyRegion` | (required) | Fly.io region (e.g. `ord`, `sjc`, `lhr`) |
 | `flyMachineSize` | `shared-cpu-1x` | Machine size preset |
-| `loadBalancerClass` | `fly-frp-tunnel.dev/lb` | LoadBalancer class to watch |
+| `loadBalancerClass` | `fly-tunnel-operator.dev/lb` | LoadBalancer class to watch |
 | `frpsImage` | `snowdreamtech/frps:latest` | Container image for frps |
 | `frpcImage` | `snowdreamtech/frpc:latest` | Container image for frpc |
-| `image.repository` | `ghcr.io/zhiming0/fly-frp-tunnel` | Operator image |
+| `image.repository` | `ghcr.io/zhiming0/fly-tunnel-operator` | Operator image |
 | `image.tag` | `appVersion` | Operator image tag |
 | `replicaCount` | `1` | Operator replicas (leader election active) |
 
@@ -84,7 +84,7 @@ metadata:
   namespace: default
 spec:
   type: LoadBalancer
-  loadBalancerClass: fly-frp-tunnel.dev/lb
+  loadBalancerClass: fly-tunnel-operator.dev/lb
   ports:
     - name: http
       port: 80
@@ -111,8 +111,8 @@ Override the Fly.io region or machine size for individual Services via annotatio
 ```yaml
 metadata:
   annotations:
-    fly-frp-tunnel.dev/fly-region: lhr
-    fly-frp-tunnel.dev/fly-machine-size: shared-cpu-2x
+    fly-tunnel-operator.dev/fly-region: lhr
+    fly-tunnel-operator.dev/fly-machine-size: shared-cpu-2x
 ```
 
 ### Supported machine sizes
@@ -141,8 +141,7 @@ metadata:
 │   │   └── config.go                # frpc/frps TOML config generation
 │   └── fakefly/
 │       └── server.go                # Fake Fly.io API server (testing)
-├── charts/fly-frp-tunnel/           # Helm chart
-├── config/                          # Raw Kubernetes manifests (RBAC, manager)
+├── charts/fly-tunnel-operator/           # Helm chart
 ├── Dockerfile
 └── Makefile
 ```
@@ -153,12 +152,12 @@ The operator tracks tunnel state on the Service via annotations:
 
 | Annotation | Description |
 |---|---|
-| `fly-frp-tunnel.dev/machine-id` | Fly.io Machine ID |
-| `fly-frp-tunnel.dev/frpc-deployment` | Name of the in-cluster frpc Deployment |
-| `fly-frp-tunnel.dev/ip-id` | Fly.io IP address allocation ID |
-| `fly-frp-tunnel.dev/public-ip` | Allocated public IPv4 address |
-| `fly-frp-tunnel.dev/fly-region` | (user-set) Override Fly.io region |
-| `fly-frp-tunnel.dev/fly-machine-size` | (user-set) Override machine size |
+| `fly-tunnel-operator.dev/machine-id` | Fly.io Machine ID |
+| `fly-tunnel-operator.dev/frpc-deployment` | Name of the in-cluster frpc Deployment |
+| `fly-tunnel-operator.dev/ip-id` | Fly.io IP address allocation ID |
+| `fly-tunnel-operator.dev/public-ip` | Allocated public IPv4 address |
+| `fly-tunnel-operator.dev/fly-region` | (user-set) Override Fly.io region |
+| `fly-tunnel-operator.dev/fly-machine-size` | (user-set) Override machine size |
 
 ## License
 

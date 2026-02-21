@@ -1,4 +1,4 @@
-module github.com/zhiming0/fly-frp-tunnel
+module github.com/zhiming0/fly-tunnel-operator
 
 go 1.24.7
 
