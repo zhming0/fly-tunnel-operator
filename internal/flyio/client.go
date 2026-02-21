@@ -515,8 +515,9 @@ func (c *Client) CreateApp(ctx context.Context, appName, orgSlug string) error {
 }
 
 // DeleteApp deletes a Fly App by name.
+// Uses force=true to stop any running Machines and delete immediately.
 func (c *Client) DeleteApp(ctx context.Context, appName string) error {
-	url := fmt.Sprintf("%s/%s/apps/%s", c.baseURL, apiVersion, appName)
+	url := fmt.Sprintf("%s/%s/apps/%s?force=true", c.baseURL, apiVersion, appName)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, url, nil)
 	if err != nil {

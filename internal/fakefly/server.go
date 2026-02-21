@@ -197,7 +197,7 @@ func (s *Server) deleteApp(w http.ResponseWriter, _ *http.Request, appName strin
 	delete(s.apps, appName)
 	s.mu.Unlock()
 
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusAccepted)
 }
 
 func (s *Server) createMachine(w http.ResponseWriter, r *http.Request, appName string) {
