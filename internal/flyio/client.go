@@ -64,6 +64,13 @@ type MachineConfig struct {
 	Env      map[string]string `json:"env,omitempty"`
 	Services []MachineService  `json:"services,omitempty"`
 	Guest    *GuestConfig      `json:"guest,omitempty"`
+	Init     *InitConfig       `json:"init,omitempty"`
+}
+
+// InitConfig overrides the container's entrypoint/cmd.
+type InitConfig struct {
+	Cmd        []string `json:"cmd,omitempty"`
+	Entrypoint []string `json:"entrypoint,omitempty"`
 }
 
 // GuestConfig specifies the Machine's resource allocation.

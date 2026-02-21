@@ -103,18 +103,26 @@ func (m *Manager) Provision(ctx context.Context, svc *corev1.Service) (*TunnelRe
 		guest = guestForSize(size)
 	}
 
+	// Generate frps config and inject it via init command.
+	frpsConfig := frp.GenerateServerConfig(frp.DefaultServerPort)
+
 	// Create the fly.io Machine running frps.
 	logger.Info("Creating fly.io Machine", "name", tunnelName, "region", region)
 	machine, err := m.flyClient.CreateMachine(ctx, m.config.FlyApp, flyio.CreateMachineInput{
 		Name:   tunnelName,
 		Region: region,
 		Config: flyio.MachineConfig{
-			Image: m.config.FrpsImage,
-			Guest: guest,
+			Image:    m.config.FrpsImage,
+			Guest:    guest,
 			Services: machineServices,
 			Env: map[string]string{
-				// frps config passed via environment — the snowdreamtech image
-				// reads /etc/frp/frps.toml. We mount it via a generated command.
+				"FRP_SERVER_CONFIG": frpsConfig,
+			},
+			Init: &flyio.InitConfig{
+				Entrypoint: []string{"sh"},
+				Cmd: []string{"-c",
+					"mkdir -p /etc/frp && echo \"$FRP_SERVER_CONFIG\" > /etc/frp/frps.toml && exec frps -c /etc/frp/frps.toml",
+				},
 			},
 		},
 	})
@@ -260,12 +268,22 @@ func (m *Manager) Update(ctx context.Context, svc *corev1.Service) error {
 			region = r
 		}
 
+		frpsConfig := frp.GenerateServerConfig(frp.DefaultServerPort)
 		_, err := m.flyClient.UpdateMachine(ctx, m.config.FlyApp, machineID, flyio.CreateMachineInput{
 			Name:   tunnelName,
 			Region: region,
 			Config: flyio.MachineConfig{
 				Image:    m.config.FrpsImage,
 				Services: machineServices,
+				Env: map[string]string{
+					"FRP_SERVER_CONFIG": frpsConfig,
+				},
+				Init: &flyio.InitConfig{
+					Entrypoint: []string{"sh"},
+					Cmd: []string{"-c",
+						"mkdir -p /etc/frp && echo \"$FRP_SERVER_CONFIG\" > /etc/frp/frps.toml && exec frps -c /etc/frp/frps.toml",
+					},
+				},
 			},
 		})
 		if err != nil {
