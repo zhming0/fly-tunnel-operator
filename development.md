@@ -28,9 +28,7 @@ export FLY_API_TOKEN=<your-token>
 export FLY_ORG=<your-org-slug>
 export FLY_REGION=ord
 
-go run . \
-  --namespace fly-tunnel-operator-system \
-  --fly-machine-size shared-cpu-1x
+go run . --fly-machine-size shared-cpu-1x
 ```
 
 Or equivalently:
