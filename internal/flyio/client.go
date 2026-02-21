@@ -109,6 +109,12 @@ type IPAddress struct {
 	CreatedAt string `json:"created_at"`
 }
 
+// CreateAppInput is the request body for creating a Fly App.
+type CreateAppInput struct {
+	AppName string `json:"app_name"`
+	OrgSlug string `json:"org_slug"`
+}
+
 // AllocateIPAddressInput is the GraphQL mutation input for allocating an IP.
 type AllocateIPAddressInput struct {
 	AppID   string `json:"appId"`
@@ -474,6 +480,62 @@ func (c *Client) ListIPAddresses(ctx context.Context, appName string) ([]IPAddre
 	}
 
 	return data.App.IPAddresses.Nodes, nil
+}
+
+// CreateApp creates a new Fly App in the specified organization.
+func (c *Client) CreateApp(ctx context.Context, appName, orgSlug string) error {
+	url := fmt.Sprintf("%s/%s/apps", c.baseURL, apiVersion)
+
+	body, err := json.Marshal(CreateAppInput{
+		AppName: appName,
+		OrgSlug: orgSlug,
+	})
+	if err != nil {
+		return fmt.Errorf("marshaling create app input: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("creating request: %w", err)
+	}
+	c.setHeaders(req)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("creating app: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("creating app: status %d, body: %s", resp.StatusCode, string(respBody))
+	}
+
+	return nil
+}
+
+// DeleteApp deletes a Fly App by name.
+func (c *Client) DeleteApp(ctx context.Context, appName string) error {
+	url := fmt.Sprintf("%s/%s/apps/%s", c.baseURL, apiVersion, appName)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, url, nil)
+	if err != nil {
+		return fmt.Errorf("creating request: %w", err)
+	}
+	c.setHeaders(req)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("deleting app: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted && resp.StatusCode != http.StatusNoContent {
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("deleting app: status %d, body: %s", resp.StatusCode, string(respBody))
+	}
+
+	return nil
 }
 
 func (c *Client) setHeaders(req *http.Request) {

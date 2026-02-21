@@ -21,22 +21,23 @@ import (
 
 const (
 	// Annotation keys used on the Service to track tunnel state.
-	AnnotationMachineID     = "fly-tunnel-operator.dev/machine-id"
+	AnnotationMachineID      = "fly-tunnel-operator.dev/machine-id"
 	AnnotationFrpcDeployment = "fly-tunnel-operator.dev/frpc-deployment"
-	AnnotationIPID          = "fly-tunnel-operator.dev/ip-id"
-	AnnotationPublicIP      = "fly-tunnel-operator.dev/public-ip"
-	AnnotationTunnelGroup   = "fly-tunnel-operator.dev/tunnel-group"
-	AnnotationFlyRegion     = "fly-tunnel-operator.dev/fly-region"
+	AnnotationIPID           = "fly-tunnel-operator.dev/ip-id"
+	AnnotationPublicIP       = "fly-tunnel-operator.dev/public-ip"
+	AnnotationFlyApp         = "fly-tunnel-operator.dev/fly-app"
+	AnnotationTunnelGroup    = "fly-tunnel-operator.dev/tunnel-group"
+	AnnotationFlyRegion      = "fly-tunnel-operator.dev/fly-region"
 	AnnotationFlyMachineSize = "fly-tunnel-operator.dev/fly-machine-size"
 )
 
 // Config holds operator-level configuration.
 type Config struct {
-	FlyApp           string
-	FlyRegion        string
-	FlyMachineSize   string
-	FrpsImage        string
-	FrpcImage        string
+	FlyOrg            string
+	FlyRegion         string
+	FlyMachineSize    string
+	FrpsImage         string
+	FrpcImage         string
 	OperatorNamespace string
 }
 
@@ -58,22 +59,30 @@ func NewManager(flyClient *flyio.Client, kubeClient client.Client, config Config
 
 // TunnelResult contains the result of provisioning a tunnel.
 type TunnelResult struct {
+	FlyApp         string
 	MachineID      string
 	PublicIP       string
 	IPID           string
 	FrpcDeployment string
 }
 
-// Provision creates a fly.io Machine running frps, deploys frpc in-cluster,
-// and returns the public IP for the Service.
+// Provision creates a dedicated fly.io App with a Machine running frps,
+// deploys frpc in-cluster, and returns the public IP for the Service.
 func (m *Manager) Provision(ctx context.Context, svc *corev1.Service) (*TunnelResult, error) {
 	logger := log.FromContext(ctx)
 	tunnelName := tunnelNameForService(svc)
+	flyAppName := flyAppNameForService(svc)
 
 	// Determine region (per-service override or default).
 	region := m.config.FlyRegion
 	if r, ok := svc.Annotations[AnnotationFlyRegion]; ok && r != "" {
 		region = r
+	}
+
+	// Create a dedicated Fly App for this tunnel.
+	logger.Info("Creating fly.io App", "app", flyAppName, "org", m.config.FlyOrg)
+	if err := m.flyClient.CreateApp(ctx, flyAppName, m.config.FlyOrg); err != nil {
+		return nil, fmt.Errorf("creating fly app: %w", err)
 	}
 
 	// Build fly.io Machine services configuration.
@@ -107,8 +116,8 @@ func (m *Manager) Provision(ctx context.Context, svc *corev1.Service) (*TunnelRe
 	frpsConfig := frp.GenerateServerConfig(frp.DefaultServerPort)
 
 	// Create the fly.io Machine running frps.
-	logger.Info("Creating fly.io Machine", "name", tunnelName, "region", region)
-	machine, err := m.flyClient.CreateMachine(ctx, m.config.FlyApp, flyio.CreateMachineInput{
+	logger.Info("Creating fly.io Machine", "name", tunnelName, "app", flyAppName, "region", region)
+	machine, err := m.flyClient.CreateMachine(ctx, flyAppName, flyio.CreateMachineInput{
 		Name:   tunnelName,
 		Region: region,
 		Config: flyio.MachineConfig{
@@ -127,22 +136,24 @@ func (m *Manager) Provision(ctx context.Context, svc *corev1.Service) (*TunnelRe
 		},
 	})
 	if err != nil {
+		_ = m.flyClient.DeleteApp(ctx, flyAppName)
 		return nil, fmt.Errorf("creating fly machine: %w", err)
 	}
 	logger.Info("Machine created", "machineID", machine.ID, "instanceID", machine.InstanceID)
 
 	// Wait for the Machine to start.
-	if err := m.flyClient.WaitForMachine(ctx, m.config.FlyApp, machine.ID, machine.InstanceID, "started", 60*time.Second); err != nil {
-		// Clean up the Machine on failure.
-		_ = m.flyClient.DeleteMachine(ctx, m.config.FlyApp, machine.ID)
+	if err := m.flyClient.WaitForMachine(ctx, flyAppName, machine.ID, machine.InstanceID, "started", 60*time.Second); err != nil {
+		_ = m.flyClient.DeleteMachine(ctx, flyAppName, machine.ID)
+		_ = m.flyClient.DeleteApp(ctx, flyAppName)
 		return nil, fmt.Errorf("waiting for machine to start: %w", err)
 	}
 
 	// Allocate a dedicated IPv4.
-	logger.Info("Allocating dedicated IPv4")
-	ip, err := m.flyClient.AllocateDedicatedIPv4(ctx, m.config.FlyApp)
+	logger.Info("Allocating dedicated IPv4", "app", flyAppName)
+	ip, err := m.flyClient.AllocateDedicatedIPv4(ctx, flyAppName)
 	if err != nil {
-		_ = m.flyClient.DeleteMachine(ctx, m.config.FlyApp, machine.ID)
+		_ = m.flyClient.DeleteMachine(ctx, flyAppName, machine.ID)
+		_ = m.flyClient.DeleteApp(ctx, flyAppName)
 		return nil, fmt.Errorf("allocating dedicated IPv4: %w", err)
 	}
 	logger.Info("IPv4 allocated", "address", ip.Address, "id", ip.ID)
@@ -150,12 +161,14 @@ func (m *Manager) Provision(ctx context.Context, svc *corev1.Service) (*TunnelRe
 	// Deploy frpc in-cluster.
 	frpcDeploymentName := fmt.Sprintf("frpc-%s", tunnelName)
 	if err := m.deployFrpc(ctx, svc, ip.Address, frpcDeploymentName); err != nil {
-		_ = m.flyClient.ReleaseIPAddress(ctx, m.config.FlyApp, ip.ID)
-		_ = m.flyClient.DeleteMachine(ctx, m.config.FlyApp, machine.ID)
+		_ = m.flyClient.ReleaseIPAddress(ctx, flyAppName, ip.ID)
+		_ = m.flyClient.DeleteMachine(ctx, flyAppName, machine.ID)
+		_ = m.flyClient.DeleteApp(ctx, flyAppName)
 		return nil, fmt.Errorf("deploying frpc: %w", err)
 	}
 
 	return &TunnelResult{
+		FlyApp:         flyAppName,
 		MachineID:      machine.ID,
 		PublicIP:       ip.Address,
 		IPID:           ip.ID,
@@ -167,6 +180,8 @@ func (m *Manager) Provision(ctx context.Context, svc *corev1.Service) (*TunnelRe
 func (m *Manager) Teardown(ctx context.Context, svc *corev1.Service) error {
 	logger := log.FromContext(ctx)
 
+	flyAppName := svc.Annotations[AnnotationFlyApp]
+
 	// Delete frpc Deployment and ConfigMap.
 	if deployName, ok := svc.Annotations[AnnotationFrpcDeployment]; ok && deployName != "" {
 		logger.Info("Deleting frpc Deployment", "name", deployName)
@@ -175,19 +190,27 @@ func (m *Manager) Teardown(ctx context.Context, svc *corev1.Service) error {
 		}
 	}
 
-	// Release the dedicated IPv4.
-	if ipID, ok := svc.Annotations[AnnotationIPID]; ok && ipID != "" {
-		logger.Info("Releasing dedicated IPv4", "id", ipID)
-		if err := m.flyClient.ReleaseIPAddress(ctx, m.config.FlyApp, ipID); err != nil {
-			logger.Error(err, "Failed to release IP", "id", ipID)
+	if flyAppName != "" {
+		// Release the dedicated IPv4.
+		if ipID, ok := svc.Annotations[AnnotationIPID]; ok && ipID != "" {
+			logger.Info("Releasing dedicated IPv4", "id", ipID)
+			if err := m.flyClient.ReleaseIPAddress(ctx, flyAppName, ipID); err != nil {
+				logger.Error(err, "Failed to release IP", "id", ipID)
+			}
 		}
-	}
 
-	// Delete the fly.io Machine.
-	if machineID, ok := svc.Annotations[AnnotationMachineID]; ok && machineID != "" {
-		logger.Info("Deleting fly.io Machine", "id", machineID)
-		if err := m.flyClient.DeleteMachine(ctx, m.config.FlyApp, machineID); err != nil {
-			logger.Error(err, "Failed to delete machine", "id", machineID)
+		// Delete the fly.io Machine.
+		if machineID, ok := svc.Annotations[AnnotationMachineID]; ok && machineID != "" {
+			logger.Info("Deleting fly.io Machine", "id", machineID)
+			if err := m.flyClient.DeleteMachine(ctx, flyAppName, machineID); err != nil {
+				logger.Error(err, "Failed to delete machine", "id", machineID)
+			}
+		}
+
+		// Delete the Fly App.
+		logger.Info("Deleting fly.io App", "app", flyAppName)
+		if err := m.flyClient.DeleteApp(ctx, flyAppName); err != nil {
+			logger.Error(err, "Failed to delete fly app", "app", flyAppName)
 		}
 	}
 
@@ -200,8 +223,9 @@ func (m *Manager) Update(ctx context.Context, svc *corev1.Service) error {
 	publicIP := svc.Annotations[AnnotationPublicIP]
 	deployName := svc.Annotations[AnnotationFrpcDeployment]
 	machineID := svc.Annotations[AnnotationMachineID]
+	flyAppName := svc.Annotations[AnnotationFlyApp]
 
-	if publicIP == "" || deployName == "" {
+	if publicIP == "" || deployName == "" || flyAppName == "" {
 		return fmt.Errorf("service missing tunnel annotations, cannot update")
 	}
 
@@ -269,7 +293,7 @@ func (m *Manager) Update(ctx context.Context, svc *corev1.Service) error {
 		}
 
 		frpsConfig := frp.GenerateServerConfig(frp.DefaultServerPort)
-		_, err := m.flyClient.UpdateMachine(ctx, m.config.FlyApp, machineID, flyio.CreateMachineInput{
+		_, err := m.flyClient.UpdateMachine(ctx, flyAppName, machineID, flyio.CreateMachineInput{
 			Name:   tunnelName,
 			Region: region,
 			Config: flyio.MachineConfig{
@@ -434,6 +458,10 @@ func (m *Manager) deleteFrpcResources(ctx context.Context, deploymentName string
 
 func tunnelNameForService(svc *corev1.Service) string {
 	return fmt.Sprintf("frp-%s-%s", svc.Namespace, svc.Name)
+}
+
+func flyAppNameForService(svc *corev1.Service) string {
+	return fmt.Sprintf("fly-tunnel-%s-%s", svc.Namespace, svc.Name)
 }
 
 func guestForSize(size string) *flyio.GuestConfig {

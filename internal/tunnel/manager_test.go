@@ -27,7 +27,7 @@ func newTestScheme() *runtime.Scheme {
 
 func newTestConfig() tunnel.Config {
 	return tunnel.Config{
-		FlyApp:            "test-app",
+		FlyOrg:            "personal",
 		FlyRegion:         "syd",
 		FlyMachineSize:    "shared-cpu-1x",
 		FrpsImage:         "snowdreamtech/frps:latest",
@@ -78,6 +78,9 @@ func TestProvision(t *testing.T) {
 	}
 
 	// Verify tunnel result.
+	if result.FlyApp == "" {
+		t.Error("expected fly app name")
+	}
 	if result.MachineID == "" {
 		t.Error("expected machine ID")
 	}
@@ -89,6 +92,14 @@ func TestProvision(t *testing.T) {
 	}
 	if result.FrpcDeployment == "" {
 		t.Error("expected frpc deployment name")
+	}
+
+	// Verify fly.io App was created.
+	if server.AppCount() != 1 {
+		t.Errorf("expected 1 app, got %d", server.AppCount())
+	}
+	if !server.HasApp(result.FlyApp) {
+		t.Errorf("expected app %q to exist", result.FlyApp)
 	}
 
 	// Verify fly.io Machine was created.
@@ -166,12 +177,20 @@ func TestProvision_MultipleServices(t *testing.T) {
 		t.Fatalf("Provision svc2 failed: %v", err)
 	}
 
-	// Each should get its own Machine and IP.
+	// Each should get its own App, Machine, and IP.
+	if server.AppCount() != 2 {
+		t.Errorf("expected 2 apps, got %d", server.AppCount())
+	}
 	if server.MachineCount() != 2 {
 		t.Errorf("expected 2 machines, got %d", server.MachineCount())
 	}
 	if server.IPCount() != 2 {
 		t.Errorf("expected 2 IPs, got %d", server.IPCount())
+	}
+
+	// Fly apps should differ.
+	if result1.FlyApp == result2.FlyApp {
+		t.Errorf("expected different fly apps, both got %s", result1.FlyApp)
 	}
 
 	// IPs should differ.
@@ -204,12 +223,16 @@ func TestTeardown(t *testing.T) {
 	}
 
 	// Store tunnel state in annotations (as the controller would).
+	svc.Annotations[tunnel.AnnotationFlyApp] = result.FlyApp
 	svc.Annotations[tunnel.AnnotationMachineID] = result.MachineID
 	svc.Annotations[tunnel.AnnotationFrpcDeployment] = result.FrpcDeployment
 	svc.Annotations[tunnel.AnnotationIPID] = result.IPID
 	svc.Annotations[tunnel.AnnotationPublicIP] = result.PublicIP
 
 	// Verify resources exist before teardown.
+	if server.AppCount() != 1 {
+		t.Fatalf("expected 1 app before teardown, got %d", server.AppCount())
+	}
 	if server.MachineCount() != 1 {
 		t.Fatalf("expected 1 machine before teardown, got %d", server.MachineCount())
 	}
@@ -220,6 +243,11 @@ func TestTeardown(t *testing.T) {
 	err = mgr.Teardown(context.Background(), svc)
 	if err != nil {
 		t.Fatalf("Teardown failed: %v", err)
+	}
+
+	// Verify App was deleted.
+	if server.AppCount() != 0 {
+		t.Errorf("expected 0 apps after teardown, got %d", server.AppCount())
 	}
 
 	// Verify Machine was deleted.
@@ -272,6 +300,7 @@ func TestUpdate(t *testing.T) {
 	}
 
 	// Store tunnel state in annotations.
+	svc.Annotations[tunnel.AnnotationFlyApp] = result.FlyApp
 	svc.Annotations[tunnel.AnnotationMachineID] = result.MachineID
 	svc.Annotations[tunnel.AnnotationFrpcDeployment] = result.FrpcDeployment
 	svc.Annotations[tunnel.AnnotationIPID] = result.IPID

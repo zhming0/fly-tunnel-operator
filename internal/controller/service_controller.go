@@ -127,6 +127,7 @@ func (r *ServiceReconciler) reconcileCreate(ctx context.Context, svc *corev1.Ser
 	if svc.Annotations == nil {
 		svc.Annotations = make(map[string]string)
 	}
+	svc.Annotations[tunnel.AnnotationFlyApp] = result.FlyApp
 	svc.Annotations[tunnel.AnnotationMachineID] = result.MachineID
 	svc.Annotations[tunnel.AnnotationFrpcDeployment] = result.FrpcDeployment
 	svc.Annotations[tunnel.AnnotationIPID] = result.IPID

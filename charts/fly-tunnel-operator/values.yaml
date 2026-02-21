@@ -2,7 +2,7 @@
 
 # Fly.io configuration (required).
 flyApiToken: ""
-flyApp: ""
+flyOrg: ""
 flyRegion: ""
 
 # Machine size preset for fly.io Machines.

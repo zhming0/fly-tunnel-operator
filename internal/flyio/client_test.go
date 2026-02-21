@@ -317,6 +317,64 @@ func TestAllocateIP_HookError(t *testing.T) {
 	}
 }
 
+func TestCreateApp(t *testing.T) {
+	server := fakefly.NewServer()
+	defer server.Close()
+	client := newTestClient(server)
+
+	err := client.CreateApp(context.Background(), "my-app", "personal")
+	if err != nil {
+		t.Fatalf("CreateApp failed: %v", err)
+	}
+
+	if server.AppCount() != 1 {
+		t.Errorf("expected 1 app, got %d", server.AppCount())
+	}
+	if !server.HasApp("my-app") {
+		t.Error("expected app 'my-app' to exist")
+	}
+}
+
+func TestCreateApp_Duplicate(t *testing.T) {
+	server := fakefly.NewServer()
+	defer server.Close()
+	client := newTestClient(server)
+
+	err := client.CreateApp(context.Background(), "dup-app", "personal")
+	if err != nil {
+		t.Fatalf("CreateApp failed: %v", err)
+	}
+
+	err = client.CreateApp(context.Background(), "dup-app", "personal")
+	if err == nil {
+		t.Error("expected error for duplicate app")
+	}
+}
+
+func TestDeleteApp(t *testing.T) {
+	server := fakefly.NewServer()
+	defer server.Close()
+	client := newTestClient(server)
+
+	err := client.CreateApp(context.Background(), "del-app", "personal")
+	if err != nil {
+		t.Fatalf("CreateApp failed: %v", err)
+	}
+
+	if server.AppCount() != 1 {
+		t.Fatalf("expected 1 app, got %d", server.AppCount())
+	}
+
+	err = client.DeleteApp(context.Background(), "del-app")
+	if err != nil {
+		t.Fatalf("DeleteApp failed: %v", err)
+	}
+
+	if server.AppCount() != 0 {
+		t.Errorf("expected 0 apps after delete, got %d", server.AppCount())
+	}
+}
+
 var errFakeFailure = &fakeError{msg: "fake failure"}
 
 type fakeError struct{ msg string }

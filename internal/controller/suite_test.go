@@ -73,7 +73,7 @@ func TestMain(m *testing.M) {
 		WithGraphQLURL(flyServer.URL + "/graphql")
 
 	tunnelMgr := tunnel.NewManager(flyClient, mgr.GetClient(), tunnel.Config{
-		FlyApp:            "test-app",
+		FlyOrg:            "personal",
 		FlyRegion:         "syd",
 		FlyMachineSize:    "shared-cpu-1x",
 		FrpsImage:         "snowdreamtech/frps:latest",

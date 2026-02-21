@@ -27,7 +27,7 @@ func main() {
 		metricsAddr       string
 		healthProbeAddr   string
 		flyAPIToken       string
-		flyApp            string
+		flyOrg            string
 		flyRegion         string
 		flyMachineSize    string
 		loadBalancerClass string
@@ -39,7 +39,7 @@ func main() {
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&healthProbeAddr, "health-probe-bind-address", ":8081", "The address the health probe endpoint binds to.")
 	flag.StringVar(&flyAPIToken, "fly-api-token", "", "Fly.io API token. Can also be set via FLY_API_TOKEN env var.")
-	flag.StringVar(&flyApp, "fly-app", "", "Fly.io app name for Machines. Can also be set via FLY_APP env var.")
+	flag.StringVar(&flyOrg, "fly-org", "", "Fly.io organization slug. Can also be set via FLY_ORG env var.")
 	flag.StringVar(&flyRegion, "fly-region", "", "Fly.io region. Can also be set via FLY_REGION env var.")
 	flag.StringVar(&flyMachineSize, "fly-machine-size", "shared-cpu-1x", "Fly.io Machine size preset.")
 	flag.StringVar(&loadBalancerClass, "load-balancer-class", controller.DefaultLoadBalancerClass, "LoadBalancer class string to watch.")
@@ -58,8 +58,8 @@ func main() {
 	if flyAPIToken == "" {
 		flyAPIToken = os.Getenv("FLY_API_TOKEN")
 	}
-	if flyApp == "" {
-		flyApp = os.Getenv("FLY_APP")
+	if flyOrg == "" {
+		flyOrg = os.Getenv("FLY_ORG")
 	}
 	if flyRegion == "" {
 		flyRegion = os.Getenv("FLY_REGION")
@@ -76,8 +76,8 @@ func main() {
 		setupLog.Error(nil, "fly-api-token or FLY_API_TOKEN is required")
 		os.Exit(1)
 	}
-	if flyApp == "" {
-		setupLog.Error(nil, "fly-app or FLY_APP is required")
+	if flyOrg == "" {
+		setupLog.Error(nil, "fly-org or FLY_ORG is required")
 		os.Exit(1)
 	}
 	if flyRegion == "" {
@@ -101,7 +101,7 @@ func main() {
 
 	// Create the tunnel manager.
 	tunnelMgr := tunnel.NewManager(flyClient, mgr.GetClient(), tunnel.Config{
-		FlyApp:            flyApp,
+		FlyOrg:            flyOrg,
 		FlyRegion:         flyRegion,
 		FlyMachineSize:    flyMachineSize,
 		FrpsImage:         frpsImage,
@@ -127,7 +127,7 @@ func main() {
 	}
 
 	setupLog.Info("starting manager",
-		"flyApp", flyApp,
+		"flyOrg", flyOrg,
 		"flyRegion", flyRegion,
 		"loadBalancerClass", loadBalancerClass,
 		"namespace", operatorNamespace,

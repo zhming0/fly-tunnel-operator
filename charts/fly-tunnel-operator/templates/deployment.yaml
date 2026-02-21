@@ -38,11 +38,11 @@ spec:
                 secretKeyRef:
                   name: {{ include "fly-tunnel-operator.fullname" . }}
                   key: fly-api-token
-            - name: FLY_APP
+            - name: FLY_ORG
               valueFrom:
                 secretKeyRef:
                   name: {{ include "fly-tunnel-operator.fullname" . }}
-                  key: fly-app
+                  key: fly-org
             - name: FLY_REGION
               valueFrom:
                 secretKeyRef:

@@ -17,7 +17,8 @@ type Server struct {
 	*httptest.Server
 
 	mu       sync.Mutex
-	machines map[string]*flyio.Machine // machineID -> Machine
+	apps     map[string]bool             // appName -> exists
+	machines map[string]*flyio.Machine   // machineID -> Machine
 	ips      map[string]*flyio.IPAddress // ipID -> IPAddress
 
 	nextMachineID int
@@ -25,6 +26,8 @@ type Server struct {
 	nextIPAddr    int
 
 	// Hooks for custom behaviour in tests.
+	OnCreateApp     func(appName, orgSlug string) error
+	OnDeleteApp     func(appName string) error
 	OnCreateMachine func(appName string, input flyio.CreateMachineInput) error
 	OnDeleteMachine func(appName, machineID string) error
 	OnAllocateIP    func(appName string) error
@@ -34,6 +37,7 @@ type Server struct {
 // NewServer creates and starts a new fake Fly.io API server.
 func NewServer() *Server {
 	s := &Server{
+		apps:        make(map[string]bool),
 		machines:    make(map[string]*flyio.Machine),
 		ips:         make(map[string]*flyio.IPAddress),
 		nextIPAddr:  1,
@@ -41,14 +45,31 @@ func NewServer() *Server {
 
 	mux := http.NewServeMux()
 
-	// Machines REST API routes.
-	mux.HandleFunc("/v1/apps/", s.handleMachines)
+	// Apps REST API routes (exact match for create/list).
+	mux.HandleFunc("/v1/apps", s.handleApps)
+
+	// Apps + Machines REST API routes (path prefix for app-specific operations).
+	mux.HandleFunc("/v1/apps/", s.handleAppsAndMachines)
 
 	// GraphQL endpoint for IP allocation.
 	mux.HandleFunc("/graphql", s.handleGraphQL)
 
 	s.Server = httptest.NewServer(mux)
 	return s
+}
+
+// AppCount returns the number of apps.
+func (s *Server) AppCount() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return len(s.apps)
+}
+
+// HasApp returns true if the app exists.
+func (s *Server) HasApp(name string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.apps[name]
 }
 
 // GetMachines returns a copy of all machines.
@@ -91,17 +112,36 @@ func (s *Server) IPCount() int {
 	return len(s.ips)
 }
 
-func (s *Server) handleMachines(w http.ResponseWriter, r *http.Request) {
-	// Parse path: /v1/apps/{appName}/machines[/{machineID}[/wait]]
+func (s *Server) handleApps(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		s.createApp(w, r)
+		return
+	}
+	http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+}
+
+func (s *Server) handleAppsAndMachines(w http.ResponseWriter, r *http.Request) {
+	// Parse path: /v1/apps/{appName}[/machines[/{machineID}[/wait]]]
 	path := strings.TrimPrefix(r.URL.Path, "/v1/apps/")
 	parts := strings.Split(path, "/")
 
-	if len(parts) < 2 || parts[1] != "machines" {
+	if len(parts) < 1 {
 		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}
 
 	appName := parts[0]
+
+	// DELETE /v1/apps/{appName} — delete app
+	if len(parts) == 1 && r.Method == http.MethodDelete {
+		s.deleteApp(w, r, appName)
+		return
+	}
+
+	if len(parts) < 2 || parts[1] != "machines" {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
 
 	switch {
 	case len(parts) == 2 && r.Method == http.MethodPost:
@@ -117,6 +157,47 @@ func (s *Server) handleMachines(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.Error(w, "not found", http.StatusNotFound)
 	}
+}
+
+func (s *Server) createApp(w http.ResponseWriter, r *http.Request) {
+	var input flyio.CreateAppInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if s.OnCreateApp != nil {
+		if err := s.OnCreateApp(input.AppName, input.OrgSlug); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	s.mu.Lock()
+	if s.apps[input.AppName] {
+		s.mu.Unlock()
+		http.Error(w, "app already exists", http.StatusConflict)
+		return
+	}
+	s.apps[input.AppName] = true
+	s.mu.Unlock()
+
+	w.WriteHeader(http.StatusCreated)
+}
+
+func (s *Server) deleteApp(w http.ResponseWriter, _ *http.Request, appName string) {
+	if s.OnDeleteApp != nil {
+		if err := s.OnDeleteApp(appName); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	s.mu.Lock()
+	delete(s.apps, appName)
+	s.mu.Unlock()
+
+	w.WriteHeader(http.StatusOK)
 }
 
 func (s *Server) createMachine(w http.ResponseWriter, r *http.Request, appName string) {
