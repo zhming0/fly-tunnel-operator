@@ -10,6 +10,9 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -a -o manager .
 
+# Dev target — verifies the build compiles, nothing more.
+FROM builder AS dev
+
 # Runtime image.
 FROM gcr.io/distroless/static:nonroot
 WORKDIR /

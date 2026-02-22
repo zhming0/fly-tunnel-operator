@@ -1,0 +1,21 @@
+steps:
+  - label: ":docker: Build"
+    agents:
+      queue: hosted-amd64-small
+    if: build.branch != "main"
+    command: docker buildx bake dev
+
+  - label: ":golang: Test"
+    image: golang:1.25.5-alpine@sha256:26111811bc967321e7b6f852e914d14bede324cd1accb7f81811929a6a57fea9
+    command: ".buildkite/steps/test"
+
+  - label: ":helm: Lint Chart"
+    command: ".buildkite/steps/lint-chart"
+
+  - block: ":rocket: Release"
+    if: build.branch == "main"
+    prompt: "Create a new release?"
+
+  - label: ":pipeline: Upload release pipeline"
+    if: build.branch == "main"
+    command: buildkite-agent pipeline upload .buildkite/pipeline.release.yml

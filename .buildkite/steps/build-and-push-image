@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+VERSION="$(buildkite-agent meta-data get release-version)"
+
+echo "--- :docker: Logging in to GHCR"
+echo "${GITHUB_TOKEN}" | docker login ghcr.io -u zhming0 --password-stdin
+
+echo "+++ :docker: Building and pushing (linux/amd64, linux/arm64)"
+VERSION="$VERSION" docker buildx bake production --push

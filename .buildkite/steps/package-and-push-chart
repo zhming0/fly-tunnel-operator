@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "--- :helm: Installing Helm"
+curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+VERSION="$(buildkite-agent meta-data get release-version)"
+CHART_DIR="charts/fly-tunnel-operator"
+OCI_REGISTRY="oci://ghcr.io/zhming0/charts"
+
+echo "--- :helm: Logging in to GHCR OCI registry"
+echo "${GITHUB_TOKEN}" | helm registry login ghcr.io -u zhming0 --password-stdin
+
+echo "--- :helm: Packaging chart with version ${VERSION}"
+helm package "${CHART_DIR}" --version "${VERSION}" --app-version "${VERSION}" -d /tmp/chart-out
+
+echo "+++ :helm: Pushing chart to ${OCI_REGISTRY}"
+helm push "/tmp/chart-out/fly-tunnel-operator-${VERSION}.tgz" "${OCI_REGISTRY}"
+
+echo "Chart pushed: ${OCI_REGISTRY}/fly-tunnel-operator:${VERSION}"

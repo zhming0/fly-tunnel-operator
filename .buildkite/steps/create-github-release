@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if ! command -v gh >/dev/null 2>&1; then
+  echo "--- :github: Installing GitHub CLI"
+  GH_VERSION="2.87.2"
+  ARCH="$(uname -m)"
+  case "$ARCH" in
+    x86_64)  ARCH="amd64" ;;
+    aarch64) ARCH="arm64" ;;
+  esac
+  curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_${ARCH}.tar.gz" \
+    | tar -xz --strip-components=1 -C /usr/local
+fi
+
+VERSION="$(buildkite-agent meta-data get "release-version")"
+TAG="$VERSION"
+IMAGE="ghcr.io/zhming0/fly-tunnel-operator"
+
+echo "--- :git: Configuring HTTPS authentication"
+git config url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "git@github.com:"
+
+echo "--- :git: Tagging $TAG"
+git tag "$TAG"
+git push origin "$TAG"
+
+echo "+++ :github: Creating GitHub release"
+gh release create "$TAG" --title "$TAG" --generate-notes --notes "## Docker image
+
+\`\`\`
+docker pull $IMAGE:$VERSION
+\`\`\`
+"

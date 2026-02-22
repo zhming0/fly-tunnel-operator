@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "--- :helm: Installing Helm"
+curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+echo "+++ :helm: Linting Helm chart"
+helm lint charts/fly-tunnel-operator --strict
+
+echo "--- :helm: Validating template rendering"
+helm template fly-tunnel-operator charts/fly-tunnel-operator \
+  --set flyApiToken=test-token \
+  --set flyOrg=personal \
+  --set flyRegion=syd \
+  > /dev/null
+echo "Template rendering OK"
