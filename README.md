@@ -49,7 +49,7 @@ When the Service is deleted, the operator tears down everything in reverse (frpc
 ### Via Helm
 
 ```bash
-helm install fly-tunnel-operator charts/fly-tunnel-operator \
+helm install fly-tunnel-operator oci://ghcr.io/zhming0/charts/fly-tunnel-operator \
   --namespace fly-tunnel-operator-system \
   --create-namespace \
   --set flyApiToken=<YOUR_FLY_API_TOKEN> \
@@ -86,7 +86,7 @@ kubectl create secret generic my-fly-credentials \
   --from-literal=fly-api-token=fo1_xxxxxxxxxx
 
 # Install the chart referencing it
-helm install fly-tunnel-operator charts/fly-tunnel-operator \
+helm install fly-tunnel-operator oci://ghcr.io/zhming0/charts/fly-tunnel-operator \
   --namespace fly-tunnel-operator-system \
   --create-namespace \
   --set existingSecret=my-fly-credentials \
