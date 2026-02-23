@@ -64,6 +64,7 @@ helm install fly-tunnel-operator charts/fly-tunnel-operator \
 | `flyApiToken` | (required) | Fly.io API token |
 | `flyOrg` | (required) | Fly.io organization slug (e.g. `personal`) |
 | `flyRegion` | (required) | Fly.io region (e.g. `ord`, `sjc`, `lhr`) |
+| `existingSecret` | `""` | Name of a pre-existing Secret containing `fly-api-token` |
 | `flyMachineSize` | `shared-cpu-1x` | Machine size preset |
 | `loadBalancerClass` | `fly-tunnel-operator.dev/lb` | LoadBalancer class to watch |
 | `frpsImage` | `snowdreamtech/frps:latest` | Container image for frps |
@@ -71,6 +72,27 @@ helm install fly-tunnel-operator charts/fly-tunnel-operator \
 | `image.repository` | `ghcr.io/zhming0/fly-tunnel-operator` | Operator image |
 | `image.tag` | `appVersion` | Operator image tag |
 | `replicaCount` | `1` | Operator replicas (leader election active) |
+
+### Using an existing Secret
+
+Instead of passing `flyApiToken` directly via `--set`, you can create a Kubernetes Secret ahead of time and reference it with `existingSecret`. This avoids exposing the token in shell history and works well with secret management tools like External Secrets Operator, Sealed Secrets, or Vault.
+
+The Secret must contain the key `fly-api-token`.
+
+```bash
+# Create the secret manually
+kubectl create secret generic my-fly-credentials \
+  --namespace fly-tunnel-operator-system \
+  --from-literal=fly-api-token=fo1_xxxxxxxxxx
+
+# Install the chart referencing it
+helm install fly-tunnel-operator charts/fly-tunnel-operator \
+  --namespace fly-tunnel-operator-system \
+  --create-namespace \
+  --set existingSecret=my-fly-credentials \
+  --set flyOrg=personal \
+  --set flyRegion=ord
+```
 
 ## Usage
 

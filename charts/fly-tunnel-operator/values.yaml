@@ -1,9 +1,16 @@
 # fly-tunnel-operator operator configuration.
 
-# Fly.io configuration (required).
+# Fly.io API token (required unless existingSecret is set).
 flyApiToken: ""
+
+# Fly.io configuration (required).
 flyOrg: ""
 flyRegion: ""
+
+# Use an existing Kubernetes Secret instead of creating one.
+# The secret must contain the key: fly-api-token.
+# When set, flyApiToken above is ignored.
+existingSecret: ""
 
 # Machine size preset for fly.io Machines.
 flyMachineSize: "shared-cpu-1x"
