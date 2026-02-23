@@ -2,7 +2,6 @@ steps:
   - label: ":docker: Build"
     agents:
       queue: hosted-amd64-small
-    if: build.branch != "main"
     command: docker buildx bake dev
 
   - label: ":golang: Test"

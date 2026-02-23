@@ -1,6 +1,6 @@
 module github.com/zhming0/fly-tunnel-operator
 
-go 1.24.7
+go 1.25.5
 
 require (
 	k8s.io/api v0.32.3
