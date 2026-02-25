@@ -457,14 +457,6 @@ func (m *Manager) deleteFrpcResources(ctx context.Context, deploymentName string
 	return nil
 }
 
-func tunnelNameForService(svc *corev1.Service) string {
-	return fmt.Sprintf("frp-%s-%s", svc.Namespace, svc.Name)
-}
-
-func flyAppNameForService(svc *corev1.Service) string {
-	return fmt.Sprintf("fly-tunnel-%s-%s", svc.Namespace, svc.Name)
-}
-
 func guestForSize(size string) *flyio.GuestConfig {
 	switch size {
 	case "shared-cpu-2x":
