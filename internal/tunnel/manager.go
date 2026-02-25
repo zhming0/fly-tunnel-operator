@@ -356,6 +356,11 @@ func (m *Manager) deployFrpc(ctx context.Context, svc *corev1.Service, serverAdd
 	}
 
 	// Create frpc Deployment.
+	resources, err := frpcResources(svc)
+	if err != nil {
+		return fmt.Errorf("building frpc resources: %w", err)
+	}
+
 	labels := map[string]string{
 		"app.kubernetes.io/name":       "frpc",
 		"app.kubernetes.io/instance":   deploymentName,
@@ -380,10 +385,11 @@ func (m *Manager) deployFrpc(ctx context.Context, svc *corev1.Service, serverAdd
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:    "frpc",
-							Image:   m.config.FrpcImage,
-							Command: []string{"frpc"},
-							Args:    []string{"-c", "/etc/frp/frpc.toml"},
+							Name:      "frpc",
+							Image:     m.config.FrpcImage,
+							Command:   []string{"frpc"},
+							Args:      []string{"-c", "/etc/frp/frpc.toml"},
+							Resources: resources,
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "config",

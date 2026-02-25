@@ -6,6 +6,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -373,6 +374,126 @@ func TestProvision_RegionOverride(t *testing.T) {
 
 	if capturedRegion != "iad" {
 		t.Errorf("expected region 'iad', got %q", capturedRegion)
+	}
+}
+
+func TestProvision_DefaultFrpcResources(t *testing.T) {
+	server := fakefly.NewServer()
+	defer server.Close()
+
+	scheme := newTestScheme()
+	kubeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+
+	mgr := tunnel.NewManager(newTestFlyClient(server), kubeClient, newTestConfig())
+
+	svc := testService("test", "default",
+		corev1.ServicePort{Name: "http", Port: 80, Protocol: corev1.ProtocolTCP},
+	)
+
+	result, err := mgr.Provision(context.Background(), svc)
+	if err != nil {
+		t.Fatalf("Provision failed: %v", err)
+	}
+
+	var deploy appsv1.Deployment
+	if err := kubeClient.Get(context.Background(), types.NamespacedName{
+		Name:      result.FrpcDeployment,
+		Namespace: testNamespace,
+	}, &deploy); err != nil {
+		t.Fatalf("expected frpc Deployment to exist: %v", err)
+	}
+
+	res := deploy.Spec.Template.Spec.Containers[0].Resources
+
+	wantCPUReq := resource.MustParse("10m")
+	wantMemReq := resource.MustParse("32Mi")
+	wantMemLim := resource.MustParse("128Mi")
+
+	if !res.Requests.Cpu().Equal(wantCPUReq) {
+		t.Errorf("cpu request: want %v, got %v", &wantCPUReq, res.Requests.Cpu())
+	}
+	if !res.Requests.Memory().Equal(wantMemReq) {
+		t.Errorf("memory request: want %v, got %v", &wantMemReq, res.Requests.Memory())
+	}
+	if !res.Limits.Memory().Equal(wantMemLim) {
+		t.Errorf("memory limit: want %v, got %v", &wantMemLim, res.Limits.Memory())
+	}
+	if _, hasCPULimit := res.Limits[corev1.ResourceCPU]; hasCPULimit {
+		t.Error("expected no CPU limit")
+	}
+}
+
+func TestProvision_FrpcResourceAnnotationOverrides(t *testing.T) {
+	server := fakefly.NewServer()
+	defer server.Close()
+
+	scheme := newTestScheme()
+	kubeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+
+	mgr := tunnel.NewManager(newTestFlyClient(server), kubeClient, newTestConfig())
+
+	svc := testService("test", "default",
+		corev1.ServicePort{Name: "http", Port: 80, Protocol: corev1.ProtocolTCP},
+	)
+	svc.Annotations[tunnel.AnnotationFrpcCPURequest] = "50m"
+	svc.Annotations[tunnel.AnnotationFrpcCPULimit] = "200m"
+	svc.Annotations[tunnel.AnnotationFrpcMemoryRequest] = "64Mi"
+	svc.Annotations[tunnel.AnnotationFrpcMemoryLimit] = "256Mi"
+
+	result, err := mgr.Provision(context.Background(), svc)
+	if err != nil {
+		t.Fatalf("Provision failed: %v", err)
+	}
+
+	var deploy appsv1.Deployment
+	if err := kubeClient.Get(context.Background(), types.NamespacedName{
+		Name:      result.FrpcDeployment,
+		Namespace: testNamespace,
+	}, &deploy); err != nil {
+		t.Fatalf("expected frpc Deployment to exist: %v", err)
+	}
+
+	res := deploy.Spec.Template.Spec.Containers[0].Resources
+
+	wantCPUReq := resource.MustParse("50m")
+	wantCPULim := resource.MustParse("200m")
+	wantMemReq := resource.MustParse("64Mi")
+	wantMemLim := resource.MustParse("256Mi")
+
+	if !res.Requests.Cpu().Equal(wantCPUReq) {
+		t.Errorf("cpu request: want %v, got %v", &wantCPUReq, res.Requests.Cpu())
+	}
+	if !res.Limits.Cpu().Equal(wantCPULim) {
+		t.Errorf("cpu limit: want %v, got %v", &wantCPULim, res.Limits.Cpu())
+	}
+	if !res.Requests.Memory().Equal(wantMemReq) {
+		t.Errorf("memory request: want %v, got %v", &wantMemReq, res.Requests.Memory())
+	}
+	if !res.Limits.Memory().Equal(wantMemLim) {
+		t.Errorf("memory limit: want %v, got %v", &wantMemLim, res.Limits.Memory())
+	}
+}
+
+func TestProvision_InvalidResourceAnnotation(t *testing.T) {
+	server := fakefly.NewServer()
+	defer server.Close()
+
+	scheme := newTestScheme()
+	kubeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+
+	mgr := tunnel.NewManager(newTestFlyClient(server), kubeClient, newTestConfig())
+
+	svc := testService("test", "default",
+		corev1.ServicePort{Name: "http", Port: 80, Protocol: corev1.ProtocolTCP},
+	)
+	svc.Annotations[tunnel.AnnotationFrpcMemoryLimit] = "not-a-quantity"
+
+	_, err := mgr.Provision(context.Background(), svc)
+	if err == nil {
+		t.Fatal("expected Provision to fail with invalid resource annotation")
+	}
+	if !containsString(err.Error(), tunnel.AnnotationFrpcMemoryLimit) {
+		t.Errorf("expected error to mention annotation %q, got: %v", tunnel.AnnotationFrpcMemoryLimit, err)
 	}
 }
 
