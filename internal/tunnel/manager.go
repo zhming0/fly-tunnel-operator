@@ -159,7 +159,7 @@ func (m *Manager) Provision(ctx context.Context, svc *corev1.Service) (*TunnelRe
 	logger.Info("IPv4 allocated", "address", ip.Address, "id", ip.ID)
 
 	// Deploy frpc in-cluster.
-	frpcDeploymentName := fmt.Sprintf("frpc-%s", tunnelName)
+	frpcDeploymentName := frpcDeploymentNameForService(svc)
 	if err := m.deployFrpc(ctx, svc, ip.Address, frpcDeploymentName); err != nil {
 		_ = m.flyClient.ReleaseIPAddress(ctx, flyAppName, ip.ID)
 		_ = m.flyClient.DeleteMachine(ctx, flyAppName, machine.ID)
@@ -332,7 +332,7 @@ func (m *Manager) deployFrpc(ctx context.Context, svc *corev1.Service, serverAdd
 			Labels: map[string]string{
 				"app.kubernetes.io/name":          "frpc",
 				"app.kubernetes.io/managed-by":    "fly-tunnel-operator",
-				"fly-tunnel-operator.dev/service": fmt.Sprintf("%s-%s", svc.Namespace, svc.Name),
+				"fly-tunnel-operator.dev/service": serviceLabelValue(svc),
 			},
 		},
 		Data: map[string]string{

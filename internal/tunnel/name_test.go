@@ -8,7 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestSanitizeFlyName(t *testing.T) {
+func TestSanitizeName(t *testing.T) {
 	tests := []struct {
 		name      string
 		input     string
@@ -43,7 +43,7 @@ func TestSanitizeFlyName(t *testing.T) {
 		{
 			name:    "long name is truncated with hash",
 			input:   "fly-tunnel-very-long-namespace-name-that-exceeds-the-sixty-three-character-limit-for-fly-io-apps",
-			wantMax: flyNameMaxLen,
+			wantMax: maxLabelLen,
 		},
 		{
 			name:      "dots replaced with dashes",
@@ -59,55 +59,55 @@ func TestSanitizeFlyName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := sanitizeFlyName(tt.input)
+			got := sanitizeName(tt.input)
 
 			if tt.wantExact != "" && got != tt.wantExact {
-				t.Errorf("sanitizeFlyName(%q) = %q, want %q", tt.input, got, tt.wantExact)
+				t.Errorf("sanitizeName(%q) = %q, want %q", tt.input, got, tt.wantExact)
 			}
 
-			if len(got) > flyNameMaxLen {
-				t.Errorf("sanitizeFlyName(%q) length = %d, exceeds max %d", tt.input, len(got), flyNameMaxLen)
+			if len(got) > maxLabelLen {
+				t.Errorf("sanitizeName(%q) length = %d, exceeds max %d", tt.input, len(got), maxLabelLen)
 			}
 
 			if tt.wantMax > 0 && len(got) > tt.wantMax {
-				t.Errorf("sanitizeFlyName(%q) length = %d, want max %d", tt.input, len(got), tt.wantMax)
+				t.Errorf("sanitizeName(%q) length = %d, want max %d", tt.input, len(got), tt.wantMax)
 			}
 
 			// Verify only valid characters.
 			for _, c := range got {
 				if !((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-') {
-					t.Errorf("sanitizeFlyName(%q) contains invalid char %q", tt.input, string(c))
+					t.Errorf("sanitizeName(%q) contains invalid char %q", tt.input, string(c))
 				}
 			}
 
 			// Verify no leading/trailing dashes.
 			if got != "" {
 				if strings.HasPrefix(got, "-") || strings.HasSuffix(got, "-") {
-					t.Errorf("sanitizeFlyName(%q) = %q has leading/trailing dash", tt.input, got)
+					t.Errorf("sanitizeName(%q) = %q has leading/trailing dash", tt.input, got)
 				}
 			}
 
 			// Verify no consecutive dashes.
 			if strings.Contains(got, "--") {
-				t.Errorf("sanitizeFlyName(%q) = %q contains consecutive dashes", tt.input, got)
+				t.Errorf("sanitizeName(%q) = %q contains consecutive dashes", tt.input, got)
 			}
 		})
 	}
 }
 
-func TestSanitizeFlyName_TruncationPreservesUniqueness(t *testing.T) {
+func TestSanitizeName_TruncationPreservesUniqueness(t *testing.T) {
 	// Two different long names that share the same prefix should produce different results.
 	name1 := "fly-tunnel-" + strings.Repeat("a", 60) + "-service-one"
 	name2 := "fly-tunnel-" + strings.Repeat("a", 60) + "-service-two"
 
-	result1 := sanitizeFlyName(name1)
-	result2 := sanitizeFlyName(name2)
+	result1 := sanitizeName(name1)
+	result2 := sanitizeName(name2)
 
 	if result1 == result2 {
 		t.Errorf("truncation lost uniqueness: both produced %q", result1)
 	}
 
-	if len(result1) > flyNameMaxLen || len(result2) > flyNameMaxLen {
+	if len(result1) > maxLabelLen || len(result2) > maxLabelLen {
 		t.Errorf("results exceed max length: %d, %d", len(result1), len(result2))
 	}
 }
@@ -153,8 +153,8 @@ func TestFlyAppNameForService(t *testing.T) {
 				t.Errorf("flyAppNameForService() = %q, want %q", got, tt.wantExact)
 			}
 
-			if len(got) > flyNameMaxLen {
-				t.Errorf("flyAppNameForService() length = %d, exceeds max %d", len(got), flyNameMaxLen)
+			if len(got) > maxLabelLen {
+				t.Errorf("flyAppNameForService() length = %d, exceeds max %d", len(got), maxLabelLen)
 			}
 		})
 	}

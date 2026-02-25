@@ -9,20 +9,31 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-const flyNameMaxLen = 63
+// maxLabelLen is the maximum length for both Fly.io app names and
+// Kubernetes label values (both 63 characters).
+const maxLabelLen = 63
 
 func tunnelNameForService(svc *corev1.Service) string {
-	return sanitizeFlyName(fmt.Sprintf("frp-%s-%s", svc.Namespace, svc.Name))
+	return sanitizeName(fmt.Sprintf("frp-%s-%s", svc.Namespace, svc.Name))
 }
 
 func flyAppNameForService(svc *corev1.Service) string {
-	return sanitizeFlyName(fmt.Sprintf("fly-tunnel-%s-%s", svc.Namespace, svc.Name))
+	return sanitizeName(fmt.Sprintf("fly-tunnel-%s-%s", svc.Namespace, svc.Name))
 }
 
-// sanitizeFlyName enforces Fly.io app naming rules:
-// under 63 chars, lowercase letters, numbers, and dashes only.
-// When truncation is needed, a short hash suffix preserves uniqueness.
-func sanitizeFlyName(name string) string {
+func frpcDeploymentNameForService(svc *corev1.Service) string {
+	return sanitizeName(fmt.Sprintf("frpc-%s-%s", svc.Namespace, svc.Name))
+}
+
+func serviceLabelValue(svc *corev1.Service) string {
+	return sanitizeName(fmt.Sprintf("%s-%s", svc.Namespace, svc.Name))
+}
+
+// sanitizeName produces a string safe for both Fly.io app names and
+// Kubernetes label values: lowercase alphanumerics and dashes, at most
+// 63 characters. When truncation is needed a short hash suffix preserves
+// uniqueness.
+func sanitizeName(name string) string {
 	name = strings.ToLower(name)
 
 	var b strings.Builder
@@ -41,7 +52,7 @@ func sanitizeFlyName(name string) string {
 	}
 	sanitized = strings.Trim(sanitized, "-")
 
-	if len(sanitized) <= flyNameMaxLen {
+	if len(sanitized) <= maxLabelLen {
 		return sanitized
 	}
 
@@ -49,7 +60,7 @@ func sanitizeFlyName(name string) string {
 	hash := sha256.Sum256([]byte(name))
 	suffix := hex.EncodeToString(hash[:4]) // 8 hex chars
 	// Leave room for dash + 8-char suffix.
-	truncated := sanitized[:flyNameMaxLen-len(suffix)-1]
+	truncated := sanitized[:maxLabelLen-len(suffix)-1]
 	truncated = strings.TrimRight(truncated, "-")
 	return truncated + "-" + suffix
 }
