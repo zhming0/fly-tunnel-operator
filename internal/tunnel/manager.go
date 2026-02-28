@@ -3,6 +3,7 @@ package tunnel
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"time"
 
@@ -258,8 +259,8 @@ func (m *Manager) deployFrpc(ctx context.Context, svc *corev1.Service, serverAdd
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: labels,
 					Annotations: map[string]string{
-						// Force a rollout on every update so pods pick up ConfigMap changes.
-						"fly-tunnel-operator.dev/restart-at": time.Now().Format(time.RFC3339),
+						// Hash of the ConfigMap content; triggers a rollout when config changes.
+						"fly-tunnel-operator.dev/config-hash": fmt.Sprintf("%x", sha256.Sum256([]byte(configData))),
 					},
 				},
 				Spec: corev1.PodSpec{
