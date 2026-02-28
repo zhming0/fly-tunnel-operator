@@ -132,12 +132,6 @@ func (r *ServiceReconciler) reconcileCreate(ctx context.Context, svc *corev1.Ser
 	svc.Annotations[tunnel.AnnotationIPID] = result.IPID
 	svc.Annotations[tunnel.AnnotationPublicIP] = result.PublicIP
 
-	// NOTE: If this update fails (e.g., conflict), the Fly resources (app, machine, IP)
-	// already exist but their IDs won't be persisted in annotations. The next reconcile
-	// will attempt to re-provision and fail at CreateApp (deterministic name already taken),
-	// leaving the controller stuck. Making Provision idempotent (tolerating "app already
-	// exists" and recovering state) would fix this, but the failure window is narrow enough
-	// that it hasn't been worth the complexity yet.
 	if err := r.client.Update(ctx, svc); err != nil {
 		return reconcile.Result{}, fmt.Errorf("updating service annotations: %w", err)
 	}

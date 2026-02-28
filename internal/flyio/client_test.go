@@ -317,14 +317,14 @@ func TestAllocateIP_HookError(t *testing.T) {
 	}
 }
 
-func TestCreateApp(t *testing.T) {
+func TestEnsureApp(t *testing.T) {
 	server := fakefly.NewServer()
 	defer server.Close()
 	client := newTestClient(server)
 
-	err := client.CreateApp(context.Background(), "my-app", "personal")
+	err := client.EnsureApp(context.Background(), "my-app", "personal")
 	if err != nil {
-		t.Fatalf("CreateApp failed: %v", err)
+		t.Fatalf("EnsureApp failed: %v", err)
 	}
 
 	if server.AppCount() != 1 {
@@ -335,19 +335,24 @@ func TestCreateApp(t *testing.T) {
 	}
 }
 
-func TestCreateApp_Duplicate(t *testing.T) {
+func TestEnsureApp_AlreadyExists(t *testing.T) {
 	server := fakefly.NewServer()
 	defer server.Close()
 	client := newTestClient(server)
 
-	err := client.CreateApp(context.Background(), "dup-app", "personal")
+	err := client.EnsureApp(context.Background(), "dup-app", "personal")
 	if err != nil {
-		t.Fatalf("CreateApp failed: %v", err)
+		t.Fatalf("EnsureApp failed: %v", err)
 	}
 
-	err = client.CreateApp(context.Background(), "dup-app", "personal")
-	if err == nil {
-		t.Error("expected error for duplicate app")
+	// Calling again should succeed (idempotent).
+	err = client.EnsureApp(context.Background(), "dup-app", "personal")
+	if err != nil {
+		t.Errorf("expected EnsureApp to be idempotent, got: %v", err)
+	}
+
+	if server.AppCount() != 1 {
+		t.Errorf("expected 1 app, got %d", server.AppCount())
 	}
 }
 
@@ -356,9 +361,9 @@ func TestDeleteApp(t *testing.T) {
 	defer server.Close()
 	client := newTestClient(server)
 
-	err := client.CreateApp(context.Background(), "del-app", "personal")
+	err := client.EnsureApp(context.Background(), "del-app", "personal")
 	if err != nil {
-		t.Fatalf("CreateApp failed: %v", err)
+		t.Fatalf("EnsureApp failed: %v", err)
 	}
 
 	if server.AppCount() != 1 {

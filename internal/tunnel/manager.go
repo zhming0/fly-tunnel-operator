@@ -73,10 +73,10 @@ func (m *Manager) Provision(ctx context.Context, svc *corev1.Service) (*TunnelRe
 	logger := log.FromContext(ctx)
 	flyAppName := flyAppNameForService(svc)
 
-	// Create a dedicated Fly App for this tunnel.
-	logger.Info("Creating fly.io App", "app", flyAppName, "org", m.config.FlyOrg)
-	if err := m.flyClient.CreateApp(ctx, flyAppName, m.config.FlyOrg); err != nil {
-		return nil, fmt.Errorf("creating fly app: %w", err)
+	// Ensure a dedicated Fly App exists for this tunnel.
+	logger.Info("Ensuring fly.io App", "app", flyAppName, "org", m.config.FlyOrg)
+	if err := m.flyClient.EnsureApp(ctx, flyAppName, m.config.FlyOrg); err != nil {
+		return nil, fmt.Errorf("ensuring fly app: %w", err)
 	}
 
 	// Create the fly.io Machine running frps.
