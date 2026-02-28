@@ -137,7 +137,7 @@ metadata:
 
 | Annotation | Default | Description |
 |---|---|---|
-| `fly-tunnel-operator.dev/fly-region` | Operator `flyRegion` | Fly.io region for this Service's Machine |
+| `fly-tunnel-operator.dev/fly-region` | Operator `flyRegion` | Fly.io region for this Service's Machine. Set at creation time — changing it on an existing Service has no effect. To move to a different region, delete and recreate the Service. |
 | `fly-tunnel-operator.dev/fly-machine-size` | `shared-cpu-1x` | Machine size preset (see table below) |
 | `fly-tunnel-operator.dev/frpc-cpu-request` | `10m` | CPU request for the frpc pod |
 | `fly-tunnel-operator.dev/frpc-cpu-limit` | (none) | CPU limit for the frpc pod |
