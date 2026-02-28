@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -482,8 +483,9 @@ func (c *Client) ListIPAddresses(ctx context.Context, appName string) ([]IPAddre
 	return data.App.IPAddresses.Nodes, nil
 }
 
-// CreateApp creates a new Fly App in the specified organization.
-func (c *Client) CreateApp(ctx context.Context, appName, orgSlug string) error {
+// EnsureApp creates a Fly App if it doesn't already exist.
+// Returns nil if the app was created or already exists.
+func (c *Client) EnsureApp(ctx context.Context, appName, orgSlug string) error {
 	url := fmt.Sprintf("%s/%s/apps", c.baseURL, apiVersion)
 
 	body, err := json.Marshal(CreateAppInput{
@@ -505,6 +507,15 @@ func (c *Client) CreateApp(ctx context.Context, appName, orgSlug string) error {
 		return fmt.Errorf("creating app: %w", err)
 	}
 	defer resp.Body.Close()
+
+	// Fly returns 422 with "Name has already been taken" when the app exists.
+	if resp.StatusCode == http.StatusUnprocessableEntity {
+		respBody, _ := io.ReadAll(resp.Body)
+		if strings.Contains(string(respBody), "already been taken") {
+			return nil
+		}
+		return fmt.Errorf("creating app: status %d, body: %s", resp.StatusCode, string(respBody))
+	}
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		respBody, _ := io.ReadAll(resp.Body)

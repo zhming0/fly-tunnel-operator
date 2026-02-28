@@ -98,8 +98,7 @@ func (r *ServiceReconciler) Reconcile(ctx context.Context, req reconcile.Request
 	}
 
 	// Check if tunnel is already provisioned.
-	if machineID, ok := svc.Annotations[tunnel.AnnotationMachineID]; ok && machineID != "" {
-		// Tunnel exists — check if ports changed and update if needed.
+	if flyApp, ok := svc.Annotations[tunnel.AnnotationFlyApp]; ok && flyApp != "" {
 		return r.reconcileUpdate(ctx, &svc)
 	}
 
@@ -151,7 +150,7 @@ func (r *ServiceReconciler) reconcileCreate(ctx context.Context, svc *corev1.Ser
 	return reconcile.Result{}, nil
 }
 
-// reconcileUpdate handles port changes on an existing tunnel.
+// reconcileUpdate ensures an existing tunnel's configuration and status are up to date.
 func (r *ServiceReconciler) reconcileUpdate(ctx context.Context, svc *corev1.Service) (reconcile.Result, error) {
 	logger := log.FromContext(ctx)
 
@@ -215,6 +214,7 @@ func (r *ServiceReconciler) isManaged(svc *corev1.Service) bool {
 // serviceFilter returns a predicate that filters for matching LoadBalancer services.
 func (r *ServiceReconciler) serviceFilter() predicate.Predicate {
 	return predicate.Funcs{
+		// Create: only if the Service is a LoadBalancer with matching loadBalancerClass.
 		CreateFunc: func(e event.CreateEvent) bool {
 			svc, ok := e.Object.(*corev1.Service)
 			if !ok {
@@ -222,30 +222,37 @@ func (r *ServiceReconciler) serviceFilter() predicate.Predicate {
 			}
 			return r.isManaged(svc)
 		},
+		// Update: only if managed AND ports changed, annotations changed, deletion
+		// started, or status is stale/missing.
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			oldSvc, ok1 := e.ObjectOld.(*corev1.Service)
 			newSvc, ok2 := e.ObjectNew.(*corev1.Service)
 			if !ok1 || !ok2 {
 				return false
 			}
-			// Reconcile if the service is managed and something relevant changed.
 			if !r.isManaged(newSvc) {
 				return false
 			}
-			// Always reconcile if ports changed.
 			if !reflect.DeepEqual(oldSvc.Spec.Ports, newSvc.Spec.Ports) {
 				return true
 			}
-			// Reconcile if deletion is in progress.
+			if !reflect.DeepEqual(oldSvc.Annotations, newSvc.Annotations) {
+				return true
+			}
 			if !newSvc.DeletionTimestamp.IsZero() {
 				return true
 			}
-			// Reconcile if status is missing.
+			// Reconcile if status is missing or doesn't match the expected IP.
 			if len(newSvc.Status.LoadBalancer.Ingress) == 0 {
+				return true
+			}
+			expectedIP := newSvc.Annotations[tunnel.AnnotationPublicIP]
+			if expectedIP != "" && newSvc.Status.LoadBalancer.Ingress[0].IP != expectedIP {
 				return true
 			}
 			return false
 		},
+		// Delete: only if managed.
 		DeleteFunc: func(e event.DeleteEvent) bool {
 			svc, ok := e.Object.(*corev1.Service)
 			if !ok {
@@ -253,6 +260,7 @@ func (r *ServiceReconciler) serviceFilter() predicate.Predicate {
 			}
 			return r.isManaged(svc)
 		},
+		// Generic: always ignored.
 		GenericFunc: func(e event.GenericEvent) bool {
 			return false
 		},

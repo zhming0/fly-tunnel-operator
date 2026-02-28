@@ -37,10 +37,10 @@ type Server struct {
 // NewServer creates and starts a new fake Fly.io API server.
 func NewServer() *Server {
 	s := &Server{
-		apps:        make(map[string]bool),
-		machines:    make(map[string]*flyio.Machine),
-		ips:         make(map[string]*flyio.IPAddress),
-		nextIPAddr:  1,
+		apps:       make(map[string]bool),
+		machines:   make(map[string]*flyio.Machine),
+		ips:        make(map[string]*flyio.IPAddress),
+		nextIPAddr: 1,
 	}
 
 	mux := http.NewServeMux()
@@ -176,7 +176,7 @@ func (s *Server) createApp(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	if s.apps[input.AppName] {
 		s.mu.Unlock()
-		http.Error(w, "app already exists", http.StatusConflict)
+		http.Error(w, `{"error":"Validation failed: Name has already been taken"}`, http.StatusUnprocessableEntity)
 		return
 	}
 	s.apps[input.AppName] = true

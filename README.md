@@ -118,16 +118,33 @@ my-web-app   LoadBalancer   10.43.100.50   137.66.x.x    80:31234/TCP,443:31235/
 
 ### Per-Service overrides
 
-Override the Fly.io region or machine size for individual Services via annotations:
+Override operator defaults for individual Services via annotations:
 
 ```yaml
 metadata:
   annotations:
+    # Fly.io Machine configuration
     fly-tunnel-operator.dev/fly-region: lhr
     fly-tunnel-operator.dev/fly-machine-size: shared-cpu-2x
+
+    # frpc pod resource requests/limits
+    fly-tunnel-operator.dev/frpc-cpu-request: "50m"
+    fly-tunnel-operator.dev/frpc-cpu-limit: "200m"
+    fly-tunnel-operator.dev/frpc-memory-request: "64Mi"
+    fly-tunnel-operator.dev/frpc-memory-limit: "256Mi"
 ```
 
-### Supported machine sizes
+
+| Annotation | Default | Description |
+|---|---|---|
+| `fly-tunnel-operator.dev/fly-region` | Operator `flyRegion` | Fly.io region for this Service's Machine. Set at creation time — changing it on an existing Service has no effect. To move to a different region, delete and recreate the Service. |
+| `fly-tunnel-operator.dev/fly-machine-size` | `shared-cpu-1x` | Machine size preset (see table below) |
+| `fly-tunnel-operator.dev/frpc-cpu-request` | `10m` | CPU request for the frpc pod |
+| `fly-tunnel-operator.dev/frpc-cpu-limit` | (none) | CPU limit for the frpc pod |
+| `fly-tunnel-operator.dev/frpc-memory-request` | `32Mi` | Memory request for the frpc pod |
+| `fly-tunnel-operator.dev/frpc-memory-limit` | `128Mi` | Memory limit for the frpc pod |
+
+#### Supported machine sizes
 
 | Preset | CPUs | Memory |
 |---|---|---|
