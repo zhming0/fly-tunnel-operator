@@ -71,7 +71,7 @@ type TunnelResult struct {
 // deploys frpc in-cluster, and returns the public IP for the Service.
 func (m *Manager) Provision(ctx context.Context, svc *corev1.Service) (*TunnelResult, error) {
 	logger := log.FromContext(ctx)
-	flyAppName := flyAppNameForService(svc)
+	flyAppName := flyAppNameForService(svc, m.config.FlyOrg)
 
 	// Ensure a dedicated Fly App exists for this tunnel.
 	logger.Info("Ensuring fly.io App", "app", flyAppName, "org", m.config.FlyOrg)
@@ -144,7 +144,7 @@ func (m *Manager) Teardown(ctx context.Context, svc *corev1.Service) error {
 	// always attempt this even if individual resource annotations are missing.
 	flyAppName := svc.Annotations[AnnotationFlyApp]
 	if flyAppName == "" {
-		flyAppName = flyAppNameForService(svc)
+		flyAppName = flyAppNameForService(svc, m.config.FlyOrg)
 	}
 
 	// Best-effort cleanup of individual resources before deleting the app.

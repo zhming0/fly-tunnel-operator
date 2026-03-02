@@ -117,24 +117,35 @@ func TestFlyAppNameForService(t *testing.T) {
 		name      string
 		namespace string
 		svcName   string
+		flyOrg    string
 		wantExact string // empty means just check constraints
 	}{
 		{
 			name:      "normal short names",
 			namespace: "default",
 			svcName:   "nginx",
-			wantExact: "fly-tunnel-default-nginx",
+			flyOrg:    "personal",
+			wantExact: "fly-tunnel-default-nginx-personal",
 		},
 		{
 			name:      "typical gateway service",
 			namespace: "envoy-gateway-system",
 			svcName:   "envoy-gateway",
-			wantExact: "fly-tunnel-envoy-gateway-system-envoy-gateway",
+			flyOrg:    "my-org",
+			wantExact: "fly-tunnel-envoy-gateway-system-envoy-gateway-my-org",
 		},
 		{
 			name:      "very long namespace and service",
 			namespace: "this-is-a-really-long-namespace-name",
 			svcName:   "and-this-is-a-really-long-service-name-too",
+			flyOrg:    "personal",
+		},
+		{
+			name:      "different orgs produce different names",
+			namespace: "default",
+			svcName:   "nginx",
+			flyOrg:    "other-org",
+			wantExact: "fly-tunnel-default-nginx-other-org",
 		},
 	}
 
@@ -147,7 +158,7 @@ func TestFlyAppNameForService(t *testing.T) {
 				},
 			}
 
-			got := flyAppNameForService(svc)
+			got := flyAppNameForService(svc, tt.flyOrg)
 
 			if tt.wantExact != "" && got != tt.wantExact {
 				t.Errorf("flyAppNameForService() = %q, want %q", got, tt.wantExact)

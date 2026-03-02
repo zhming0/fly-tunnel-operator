@@ -17,8 +17,8 @@ func tunnelNameForService(svc *corev1.Service) string {
 	return sanitizeName(fmt.Sprintf("frp-%s-%s", svc.Namespace, svc.Name))
 }
 
-func flyAppNameForService(svc *corev1.Service) string {
-	return sanitizeName(fmt.Sprintf("fly-tunnel-%s-%s", svc.Namespace, svc.Name))
+func flyAppNameForService(svc *corev1.Service, flyOrg string) string {
+	return sanitizeName(fmt.Sprintf("fly-tunnel-%s-%s-%s", svc.Namespace, svc.Name, flyOrg))
 }
 
 func frpcDeploymentNameForService(svc *corev1.Service) string {
@@ -58,8 +58,8 @@ func sanitizeName(name string) string {
 
 	// Truncate with a hash suffix for uniqueness.
 	hash := sha256.Sum256([]byte(name))
-	suffix := hex.EncodeToString(hash[:4]) // 8 hex chars
-	// Leave room for dash + 8-char suffix.
+	suffix := hex.EncodeToString(hash[:6]) // 12 hex chars
+	// Leave room for dash + 12-char suffix.
 	truncated := sanitized[:maxLabelLen-len(suffix)-1]
 	truncated = strings.TrimRight(truncated, "-")
 	return truncated + "-" + suffix
